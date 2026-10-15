@@ -33,7 +33,6 @@ export const ClipModal = ({
   const [copied, setCopied] = useState(false);
   const t = translations[lang];
 
-  // Cerrar con tecla Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -101,17 +100,15 @@ export const ClipModal = ({
           onClick={onClose}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm select-none"
         >
-          {/* Contenedor del Modal */}
           <motion.div
             key="clip-modal-card"
             initial={{ opacity: 0, scale: 0.95, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            onClick={(e) => e.stopPropagation()} // Evita cerrar al hacer clic dentro
+            onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-4xl max-h-[88vh] flex flex-col theme-bg-panel border theme-border-app rounded-2xl shadow-2xl overflow-hidden"
           >
-            {/* Header del Modal */}
             <div className="flex items-center justify-between p-4 border-b theme-border-app theme-bg-header">
               <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
                 {renderBadge(clip)}
@@ -124,7 +121,6 @@ export const ClipModal = ({
                 </span>
               </div>
 
-              {/* Acciones & Botón X */}
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => onTogglePin(clip.id)}
@@ -167,7 +163,6 @@ export const ClipModal = ({
                   </button>
                 )}
 
-                {/* Botón X destacado para cerrar */}
                 <button
                   onClick={onClose}
                   className="p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-500 theme-text-muted transition-colors ml-1"
@@ -178,14 +173,12 @@ export const ClipModal = ({
               </div>
             </div>
 
-            {/* Cuerpo del Modal con scroll completo */}
             <div className="flex-1 p-4 overflow-y-auto overflow-x-auto theme-bg-input">
               <pre className="font-mono theme-code-size whitespace-pre-wrap break-words leading-relaxed select-text theme-text-app m-0 p-0 font-normal">
                 {clip.content}
               </pre>
             </div>
 
-            {/* Footer sutil */}
             <div className="px-4 py-2 border-t theme-border-app theme-bg-header flex items-center justify-between text-[11px] theme-text-muted">
               <span>{t.cards.modalHint}</span>
               <span className="font-mono">

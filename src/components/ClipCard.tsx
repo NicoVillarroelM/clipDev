@@ -117,7 +117,6 @@ export const ClipCard = ({
           : "theme-bg-card theme-border-app hover:theme-accent-border"
       }`}
     >
-      {/* Top Header of the Card */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
           {renderBadge()}
@@ -132,9 +131,7 @@ export const ClipCard = ({
           </span>
         </div>
 
-        {/* Action buttons */}
         <div className="flex items-center gap-1">
-          {/* Botón de Pantalla Completa */}
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => onOpenModal(clip)}
@@ -201,7 +198,6 @@ export const ClipCard = ({
         </div>
       </div>
 
-      {/* Content Preview con scroll interno */}
       <div
         onClick={() => {
           const selection = window.getSelection();
@@ -218,13 +214,11 @@ export const ClipCard = ({
           {clip.content}
         </pre>
 
-        {/* Gradiente sutil solo cuando está colapsado */}
         {isLong && !expanded && (
           <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[var(--bg-input)] to-transparent pointer-events-none" />
         )}
       </div>
 
-      {/* Botones inferiores para código largo */}
       {isLong && (
         <div className="flex items-center gap-3 mt-1.5">
           <button

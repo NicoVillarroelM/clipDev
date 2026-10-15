@@ -69,9 +69,7 @@ export const TitleBar = ({
 
   return (
     <header className="titlebar-drag h-12 theme-bg-header border-b theme-border-app flex items-center justify-between px-3 select-none transition-colors duration-200">
-      {/* Brand & Tabs */}
       <div className="flex items-center gap-3 sm:gap-4">
-        {/* Brand & Logo Oficial de ClipDev */}
         <div className="flex items-center gap-2.5 group cursor-default">
           <div className="w-7 h-7 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
             <img
@@ -92,7 +90,6 @@ export const TitleBar = ({
           </div>
         </div>
 
-        {/* Tab switchers con animaciones fluidas */}
         <div className="titlebar-no-drag flex items-center theme-bg-app p-0.5 rounded-lg border theme-border-app relative">
           <button
             onClick={() => onTabChange("clipboard")}
@@ -136,16 +133,13 @@ export const TitleBar = ({
         </div>
       </div>
 
-      {/* Right Controls: Palette, Text Size, Dark/Light, Language & Window controls */}
       <div className="flex items-center gap-1.5 sm:gap-2">
-        {/* Selector de paleta de colores */}
         <ThemeSelector
           currentTheme={currentTheme}
           onSelectTheme={onSelectTheme}
           lang={lang}
         />
 
-        {/* Botón de tamaño de letra para accesibilidad con animación */}
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={onCycleFontSize}
@@ -176,7 +170,6 @@ export const TitleBar = ({
           </div>
         </motion.button>
 
-        {/* Toggle Dark / Light */}
         <button
           onClick={onToggleMode}
           className="titlebar-no-drag p-1.5 rounded-md theme-bg-panel hover:theme-accent-subtle border theme-border-app theme-text-app text-xs transition-colors shadow-sm"
@@ -189,7 +182,6 @@ export const TitleBar = ({
           )}
         </button>
 
-        {/* Switcher de Idioma ES / EN */}
         <button
           onClick={onToggleLang}
           className="titlebar-no-drag flex items-center gap-1 px-2 py-1 rounded-md theme-bg-panel hover:theme-accent-subtle border theme-border-app theme-text-app text-xs font-semibold uppercase tracking-wider transition-colors shadow-sm"
@@ -199,12 +191,10 @@ export const TitleBar = ({
           <span>{lang}</span>
         </button>
 
-        {/* Atajo hint */}
         <div className="hidden md:flex items-center gap-1 text-[11px] theme-text-muted font-mono theme-bg-app px-2 py-0.5 rounded border theme-border-app">
           <span>{t.app.shortcutHint}</span>
         </div>
 
-        {/* Window controls */}
         <div className="titlebar-no-drag flex items-center gap-0.5 ml-1">
           <button
             onClick={handleMinimize}

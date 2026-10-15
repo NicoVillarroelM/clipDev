@@ -19,7 +19,6 @@ export const ConfirmDeleteModal = ({
 }: ConfirmDeleteModalProps) => {
   const t = translations[lang];
 
-  // Cerrar con tecla Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -44,7 +43,6 @@ export const ConfirmDeleteModal = ({
           onClick={onClose}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm select-none"
         >
-          {/* Card del Modal */}
           <motion.div
             key="confirm-delete-card"
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -54,7 +52,6 @@ export const ConfirmDeleteModal = ({
             onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-md flex flex-col theme-bg-panel border theme-border-app rounded-2xl shadow-2xl overflow-hidden p-5"
           >
-            {/* Botón X de cerrar */}
             <button
               onClick={onClose}
               className="absolute right-3.5 top-3.5 p-1 rounded-lg hover:bg-zinc-500/10 theme-text-muted hover:theme-text-app transition-colors"
@@ -63,7 +60,6 @@ export const ConfirmDeleteModal = ({
               <X className="w-4 h-4" />
             </button>
 
-            {/* Encabezado con ícono de alerta */}
             <div className="flex items-start gap-3.5">
               <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/25 flex items-center justify-center text-red-500 shrink-0">
                 <Trash2 className="w-5 h-5" />
@@ -78,7 +74,6 @@ export const ConfirmDeleteModal = ({
               </div>
             </div>
 
-            {/* Vista previa del fragmento a eliminar */}
             <div className="mt-4 p-3 rounded-lg theme-bg-input border theme-border-app overflow-hidden">
               <div className="flex items-center justify-between text-[10px] theme-text-muted font-mono mb-1.5 pb-1 border-b theme-border-app">
                 <span className="uppercase font-semibold opacity-75">{clip.type}</span>
@@ -95,7 +90,6 @@ export const ConfirmDeleteModal = ({
               </p>
             </div>
 
-            {/* Botones de acción */}
             <div className="flex items-center justify-end gap-2.5 mt-5">
               <button
                 type="button"

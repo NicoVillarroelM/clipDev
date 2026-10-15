@@ -56,12 +56,10 @@ export const NotesView = ({
 
   const selectedNote = notes.find((n) => n.id === selectedNoteId);
 
-  // Sincronizar contenido con el editor contentEditable al cambiar de nota
   useEffect(() => {
     if (editorRef.current) {
       if (selectedNote) {
         const content = selectedNote.content || "";
-        // Detectar si ya es HTML o texto plano para respetar saltos de línea
         const isHtml = /<[a-z][\s\S]*>/i.test(content);
         editorRef.current.innerHTML = isHtml
           ? content
@@ -111,7 +109,6 @@ export const NotesView = ({
     setTimeout(() => setCopied(false), 1500);
   };
 
-  // Comandos de formato enriquecido
   const formatText = (command: string, value: string | undefined = undefined) => {
     document.execCommand(command, false, value);
     handleEditorInput();
@@ -122,7 +119,6 @@ export const NotesView = ({
     handleEditorInput();
   };
 
-  // Pegar preservando formato HTML o convirtiendo saltos de línea sin amontonar
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     const html = e.clipboardData.getData("text/html");
     const text = e.clipboardData.getData("text/plain");
@@ -139,7 +135,6 @@ export const NotesView = ({
     }
   };
 
-  // Atajos de teclado en el editor (Tab para sangría, etc.)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Tab") {
       e.preventDefault();
@@ -151,14 +146,12 @@ export const NotesView = ({
     return NOTE_COLORS.find((c) => c.id === color) || NOTE_COLORS[0];
   };
 
-  // Contadores de palabras y caracteres
   const textContent = editorRef.current?.innerText || selectedNote?.content || "";
   const wordsCount = textContent.trim() ? textContent.trim().split(/\s+/).length : 0;
   const charsCount = textContent.length;
 
   return (
     <div className="flex-1 flex overflow-hidden">
-      {/* Sidebar con lista de notas */}
       <div className="w-56 border-r theme-border-app theme-bg-panel flex flex-col transition-colors">
         <div className="p-3 border-b theme-border-app flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider theme-text-muted">
@@ -208,11 +201,9 @@ export const NotesView = ({
         </div>
       </div>
 
-      {/* Área principal del editor */}
       <div className="flex-1 flex flex-col theme-bg-app transition-colors overflow-hidden">
         {selectedNote ? (
           <>
-            {/* Cabecera de la nota: Título, Color, Copiar y Eliminar */}
             <div className="p-3 border-b theme-border-app flex items-center justify-between gap-3 theme-bg-header transition-colors">
               <input
                 type="text"
@@ -222,7 +213,6 @@ export const NotesView = ({
                 className="flex-1 bg-transparent text-sm font-semibold theme-text-app focus:outline-none placeholder:theme-text-muted"
               />
 
-              {/* Selector de etiqueta de color */}
               <div className="flex items-center gap-1.5 px-2 py-1 theme-bg-panel rounded-lg border theme-border-app shadow-sm">
                 {NOTE_COLORS.map((c) => (
                   <button
@@ -272,9 +262,7 @@ export const NotesView = ({
               </div>
             </div>
 
-            {/* Barra de Herramientas de Formato Enriquecido */}
             <div className="px-3 py-1.5 border-b theme-border-app theme-bg-panel flex items-center gap-1 flex-wrap text-xs select-none">
-              {/* Tamaños / Encabezados */}
               <div className="flex items-center gap-0.5 pr-1.5 border-r theme-border-app">
                 <button
                   type="button"
@@ -302,7 +290,6 @@ export const NotesView = ({
                 </button>
               </div>
 
-              {/* Formato Básico: Negrita, Cursiva, Subrayado, Tachado, Resaltado */}
               <div className="flex items-center gap-0.5 px-1.5 border-r theme-border-app">
                 <button
                   type="button"
@@ -346,7 +333,6 @@ export const NotesView = ({
                 </button>
               </div>
 
-              {/* Listas, Código y Cita */}
               <div className="flex items-center gap-0.5 px-1.5 border-r theme-border-app">
                 <button
                   type="button"
@@ -382,7 +368,6 @@ export const NotesView = ({
                 </button>
               </div>
 
-              {/* Deshacer, Rehacer y Limpiar Formato */}
               <div className="flex items-center gap-0.5 pl-1.5">
                 <button
                   type="button"
@@ -411,7 +396,6 @@ export const NotesView = ({
               </div>
             </div>
 
-            {/* Lienzo contentEditable para formato enriquecido */}
             <div className="flex-1 overflow-y-auto p-4 theme-bg-app">
               <div
                 ref={editorRef}
@@ -425,7 +409,6 @@ export const NotesView = ({
               />
             </div>
 
-            {/* Footer con información de guardado físico y conteo */}
             <div className="px-4 py-1.5 border-t theme-border-app theme-bg-header flex items-center justify-between text-[11px] theme-text-muted select-none">
               <div className="flex items-center gap-1.5 font-mono">
                 <HardDrive className="w-3 h-3 text-emerald-500" />
