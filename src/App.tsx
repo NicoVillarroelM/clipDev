@@ -22,7 +22,6 @@ function App() {
   const [showScaleToast, setShowScaleToast] = useState(false);
   const isInitialMount = useRef(true);
 
-  // Idioma (ES / EN)
   const [lang, setLang] = useState<Language>(() => {
     try {
       const saved = localStorage.getItem("clipdev_lang");
@@ -32,7 +31,6 @@ function App() {
     }
   });
 
-  // Modo Claro / Oscuro
   const [mode, setMode] = useState<ThemeMode>(() => {
     try {
       const saved = localStorage.getItem("clipdev_mode");
@@ -42,7 +40,6 @@ function App() {
     }
   });
 
-  // Tamaño de texto para accesibilidad (normal, large, xlarge)
   const [fontSize, setFontSize] = useState<FontSize>(() => {
     try {
       const saved = localStorage.getItem("clipdev_fontsize");
@@ -52,7 +49,6 @@ function App() {
     }
   });
 
-  // Paleta de color (Ámbar, Esmeralda, Cian, Azul, Violeta, Rosa)
   const [currentTheme, setCurrentTheme] = useState<ThemeId>(() => {
     try {
       const saved = localStorage.getItem("clipdev_theme");
@@ -64,7 +60,6 @@ function App() {
 
   const t = translations[lang];
 
-  // Historial del portapapeles
   const [clips, setClips] = useState<ClipItem[]>(() => {
     try {
       const saved = localStorage.getItem("clipdev_clips");
@@ -74,7 +69,6 @@ function App() {
     }
   });
 
-  // Notas
   const [notes, setNotes] = useState<NoteItem[]>(() => {
     try {
       const saved = localStorage.getItem("clipdev_notes");
@@ -101,7 +95,6 @@ function App() {
     }
   });
 
-  // Persistir configuraciones en localStorage
   useEffect(() => {
     localStorage.setItem("clipdev_lang", lang);
   }, [lang]);
@@ -127,7 +120,6 @@ function App() {
     localStorage.setItem("clipdev_fontsize", fontSize);
   }, [fontSize]);
 
-  // Carga inicial ultrarrápida con skeleton suave
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
@@ -135,7 +127,6 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Animación / feedback al cambiar el tamaño de la app
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
@@ -148,7 +139,6 @@ function App() {
     return () => clearTimeout(timer);
   }, [fontSize]);
 
-  // Cargar datos de respaldo desde el disco físico si existen
   useEffect(() => {
     if (window.electronAPI?.loadStorageFromDisk) {
       window.electronAPI.loadStorageFromDisk().then((data) => {
@@ -174,7 +164,6 @@ function App() {
     window.electronAPI?.saveNotesToDisk?.(json);
   }, [notes]);
 
-  // Escuchar cambios del portapapeles desde Electron
   useEffect(() => {
     if (!window.electronAPI) {
       console.warn("window.electronAPI no está disponible.");
@@ -288,7 +277,6 @@ function App() {
     });
   };
 
-  // Filtrado y búsqueda
   const filteredClips = useMemo(() => {
     return clips.filter((clip) => {
       if (activeFilter === "pinned" && !clip.pinned) return false;
@@ -313,7 +301,6 @@ function App() {
       data-font-size={fontSize}
       className="flex flex-col h-screen w-screen theme-bg-app theme-text-app overflow-hidden font-sans select-none transition-colors duration-200"
     >
-      {/* Barra de título con controles, selector de paleta, dark/light y lenguaje */}
       <TitleBar
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -329,7 +316,6 @@ function App() {
         onCycleFontSize={handleCycleFontSize}
       />
 
-      {/* Contenido Principal con microanimación al cambiar tamaño */}
       <motion.div
         key={`content-scale-${fontSize}`}
         initial={{ opacity: 0.9, scale: 0.996 }}
@@ -339,7 +325,6 @@ function App() {
       >
         {activeTab === "clipboard" ? (
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Barra de búsqueda y filtros */}
             <div className="p-3 border-b theme-border-app theme-bg-panel flex flex-col gap-2.5 transition-colors">
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
@@ -374,7 +359,6 @@ function App() {
                 )}
               </div>
 
-              {/* Categorías / Chips con animaciones */}
               <div className="flex items-center gap-1.5 overflow-x-auto text-xs pb-0.5">
                 <button
                   onClick={() => setActiveFilter("all")}
@@ -442,7 +426,6 @@ function App() {
               </div>
             </div>
 
-            {/* Lista de Clips */}
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
               {isLoading ? (
                 <ClipSkeleton count={4} />
@@ -486,7 +469,6 @@ function App() {
         )}
       </motion.div>
 
-      {/* Toast flotante con microanimación al cambiar el tamaño de la app */}
       <AnimatePresence>
         {showScaleToast && (
           <motion.div
@@ -509,7 +491,6 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* Modal para ver clip desplegado completo */}
       <ClipModal
         clip={modalClip}
         onClose={() => setModalClip(null)}
@@ -519,7 +500,6 @@ function App() {
         lang={lang}
       />
 
-      {/* Modal de confirmación para eliminar clip */}
       <ConfirmDeleteModal
         clip={clipToDelete}
         onClose={() => setClipToDelete(null)}
