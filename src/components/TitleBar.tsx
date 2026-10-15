@@ -85,7 +85,7 @@ export const TitleBar = ({
               <span className="theme-accent-text font-black ml-0.5">Dev</span>
             </span>
             <span className="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded-full theme-accent-subtle theme-accent-text border theme-accent-border/40 tracking-wider">
-              v1.0
+              v1.0.1
             </span>
           </div>
         </div>
