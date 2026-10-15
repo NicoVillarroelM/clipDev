@@ -6,6 +6,8 @@ import { translations, type Language } from "../locales/translations";
 
 interface ConfirmDeleteModalProps {
   clip: ClipItem | null;
+  isOpenClearAll?: boolean;
+  unpinnedCount?: number;
   onClose: () => void;
   onConfirm: () => void;
   lang: Language;
@@ -13,11 +15,14 @@ interface ConfirmDeleteModalProps {
 
 export const ConfirmDeleteModal = ({
   clip,
+  isOpenClearAll = false,
+  unpinnedCount = 0,
   onClose,
   onConfirm,
   lang,
 }: ConfirmDeleteModalProps) => {
   const t = translations[lang];
+  const isOpen = Boolean(clip || isOpenClearAll);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -25,15 +30,15 @@ export const ConfirmDeleteModal = ({
         onClose();
       }
     };
-    if (clip) {
+    if (isOpen) {
       window.addEventListener("keydown", handleKeyDown);
     }
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [clip, onClose]);
+  }, [isOpen, onClose]);
 
   return (
     <AnimatePresence>
-      {clip && (
+      {isOpen && (
         <motion.div
           key="confirm-delete-backdrop"
           initial={{ opacity: 0 }}
@@ -66,29 +71,43 @@ export const ConfirmDeleteModal = ({
               </div>
               <div className="flex-1 pr-6">
                 <h3 className="text-sm font-semibold theme-text-app">
-                  {t.confirmDelete.title}
+                  {isOpenClearAll ? t.confirmClear.title : t.confirmDelete.title}
                 </h3>
                 <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                  {t.confirmDelete.message}
+                  {isOpenClearAll ? t.confirmClear.message : t.confirmDelete.message}
                 </p>
               </div>
             </div>
 
-            <div className="mt-4 p-3 rounded-lg theme-bg-input border theme-border-app overflow-hidden">
-              <div className="flex items-center justify-between text-[10px] theme-text-muted font-mono mb-1.5 pb-1 border-b theme-border-app">
-                <span className="uppercase font-semibold opacity-75">{clip.type}</span>
-                <span>
-                  {new Date(clip.createdAt).toLocaleDateString(lang === "es" ? "es-ES" : "en-US", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "2-digit",
-                  })} · {new Date(clip.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            {isOpenClearAll ? (
+              <div className="mt-4 p-3.5 rounded-lg theme-bg-input border theme-border-app flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="theme-text-app font-medium">
+                    {unpinnedCount} {t.confirmClear.warning}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                  ✓ {t.confirmClear.pinnedSafe}
                 </span>
               </div>
-              <p className="font-mono text-xs theme-text-muted line-clamp-3 whitespace-pre-wrap break-words select-text">
-                {clip.content}
-              </p>
-            </div>
+            ) : clip ? (
+              <div className="mt-4 p-3 rounded-lg theme-bg-input border theme-border-app overflow-hidden">
+                <div className="flex items-center justify-between text-[10px] theme-text-muted font-mono mb-1.5 pb-1 border-b theme-border-app">
+                  <span className="uppercase font-semibold opacity-75">{clip.type}</span>
+                  <span>
+                    {new Date(clip.createdAt).toLocaleDateString(lang === "es" ? "es-ES" : "en-US", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "2-digit",
+                    })} · {new Date(clip.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+                <p className="font-mono text-xs theme-text-muted line-clamp-3 whitespace-pre-wrap break-words select-text">
+                  {clip.content}
+                </p>
+              </div>
+            ) : null}
 
             <div className="flex items-center justify-end gap-2.5 mt-5">
               <button
@@ -105,7 +124,7 @@ export const ConfirmDeleteModal = ({
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-red-500 hover:bg-red-600 text-white transition-colors shadow-sm shadow-red-500/20 active:scale-95"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>{t.confirmDelete.confirm}</span>
+                <span>{isOpenClearAll ? t.confirmClear.confirm : t.confirmDelete.confirm}</span>
               </button>
             </div>
           </motion.div>
