@@ -13,6 +13,8 @@ export interface ElectronAPI {
     notes: any[] | null;
     storagePath: string;
   }>;
+  onUpdateDownloaded?: (callback: (version: string) => void) => () => void;
+  restartAndInstallUpdate?: () => void;
 }
 
 declare global {

@@ -1,6 +1,6 @@
-import { Minus, X, Clipboard, StickyNote, Sun, Moon, Languages, Type, Sparkles } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ThemeSelector } from "./ThemeSelector";
+import { Minus, X, Clipboard, StickyNote } from "lucide-react";
+import { motion } from "framer-motion";
+import { SettingsPopover } from "./SettingsPopover";
 import type { ActiveTab } from "../types/clip";
 import type { ThemeId, ThemeMode, FontSize, AppFinish } from "../types/theme";
 import { translations, type Language } from "../locales/translations";
@@ -16,9 +16,9 @@ interface TitleBarProps {
   mode: ThemeMode;
   onToggleMode: () => void;
   lang: Language;
-  onToggleLang: () => void;
+  onSelectLang: (lang: Language) => void;
   fontSize: FontSize;
-  onCycleFontSize: () => void;
+  onSelectFontSize: (size: FontSize) => void;
   finish: AppFinish;
   onToggleFinish: () => void;
 }
@@ -33,9 +33,9 @@ export const TitleBar = ({
   mode,
   onToggleMode,
   lang,
-  onToggleLang,
+  onSelectLang,
   fontSize,
-  onCycleFontSize,
+  onSelectFontSize,
   finish,
   onToggleFinish,
 }: TitleBarProps) => {
@@ -49,30 +49,8 @@ export const TitleBar = ({
     window.electronAPI?.closeWindow();
   };
 
-  const getFontSizeLabel = () => {
-    switch (fontSize) {
-      case "xlarge":
-        return "A++";
-      case "large":
-        return "A+";
-      default:
-        return "A";
-    }
-  };
-
-  const getFontSizeTooltip = () => {
-    switch (fontSize) {
-      case "xlarge":
-        return `${t.controls.fontSize}: ${t.controls.fontXLarge}`;
-      case "large":
-        return `${t.controls.fontSize}: ${t.controls.fontLarge}`;
-      default:
-        return `${t.controls.fontSize}: ${t.controls.fontNormal}`;
-    }
-  };
-
   return (
-    <header className="titlebar-drag h-12 theme-bg-header border-b theme-border-app flex items-center justify-between px-3 select-none transition-colors duration-200">
+    <header className="titlebar-drag relative z-50 h-12 theme-bg-header border-b theme-border-app flex items-center justify-between px-3 select-none transition-colors duration-200">
       <div className="flex items-center gap-3 sm:gap-4">
         <div className="flex items-center gap-2.5 group cursor-default">
           <div className="w-7 h-7 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
@@ -137,89 +115,30 @@ export const TitleBar = ({
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        <ThemeSelector
-          currentTheme={currentTheme}
-          onSelectTheme={onSelectTheme}
-          lang={lang}
-        />
-
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={onCycleFontSize}
-          className="titlebar-no-drag flex items-center gap-1.5 px-2 py-1 rounded-md theme-bg-panel hover:theme-accent-subtle border theme-border-app theme-text-app text-xs font-semibold transition-colors shadow-sm"
-          title={getFontSizeTooltip()}
-        >
-          <motion.div
-            key={`icon-${fontSize}`}
-            initial={{ scale: 0.8, rotate: -20 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: "spring", stiffness: 450, damping: 16 }}
-          >
-            <Type className="w-3.5 h-3.5 theme-accent-text" />
-          </motion.div>
-          <div className="overflow-hidden h-3.5 w-6 flex items-center justify-center">
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={fontSize}
-                initial={{ y: -8, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 8, opacity: 0 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
-                className="text-[10px] font-mono tracking-tight font-bold"
-              >
-                {getFontSizeLabel()}
-              </motion.span>
-            </AnimatePresence>
-          </div>
-        </motion.button>
-
-        <button
-          onClick={onToggleMode}
-          className="titlebar-no-drag p-1.5 rounded-md theme-bg-panel hover:theme-accent-subtle border theme-border-app theme-text-app text-xs transition-colors shadow-sm"
-          title={mode === "dark" ? t.controls.lightMode : t.controls.darkMode}
-        >
-          {mode === "dark" ? (
-            <Sun className="w-3.5 h-3.5 text-amber-400" />
-          ) : (
-            <Moon className="w-3.5 h-3.5 text-blue-500" />
-          )}
-        </button>
-
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={onToggleFinish}
-          className={`titlebar-no-drag flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-semibold transition-all shadow-sm ${
-            finish === "glass"
-              ? "theme-accent-subtle theme-accent-text theme-accent-border border"
-              : "theme-bg-panel hover:theme-accent-subtle theme-border-app theme-text-app"
-          }`}
-          title={finish === "glass" ? t.controls.finishSolid : t.controls.finishGlass}
-        >
-          <Sparkles className={`w-3.5 h-3.5 ${finish === "glass" ? "theme-accent-text" : "theme-text-muted"}`} />
-          <span className="text-[10px] hidden xl:inline font-mono tracking-tight font-bold">
-            {finish === "glass" ? "Glass" : "Solid"}
-          </span>
-        </motion.button>
-
-        <button
-          onClick={onToggleLang}
-          className="titlebar-no-drag flex items-center gap-1 px-2 py-1 rounded-md theme-bg-panel hover:theme-accent-subtle border theme-border-app theme-text-app text-xs font-semibold uppercase tracking-wider transition-colors shadow-sm"
-          title={t.controls.language}
-        >
-          <Languages className="w-3.5 h-3.5 theme-accent-text" />
-          <span>{lang}</span>
-        </button>
-
-        <div className="hidden md:flex items-center gap-1 text-[11px] theme-text-muted font-mono theme-bg-app px-2 py-0.5 rounded border theme-border-app">
+      <div className="flex items-center gap-2">
+        <div className="hidden sm:flex items-center gap-1 text-[11px] theme-text-muted font-mono theme-bg-app px-2.5 py-1 rounded-md border theme-border-app">
           <span>{t.app.shortcutHint}</span>
         </div>
+
+        <SettingsPopover
+          currentTheme={currentTheme}
+          onSelectTheme={onSelectTheme}
+          mode={mode}
+          onToggleMode={onToggleMode}
+          finish={finish}
+          onToggleFinish={onToggleFinish}
+          fontSize={fontSize}
+          onSelectFontSize={onSelectFontSize}
+          lang={lang}
+          onSelectLang={onSelectLang}
+        />
 
         <div className="titlebar-no-drag flex items-center gap-0.5 ml-1">
           <button
             onClick={handleMinimize}
             className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-zinc-500/10 theme-text-muted hover:theme-text-app transition-colors"
             title={t.controls.minimize}
+            aria-label={t.controls.minimize}
           >
             <Minus className="w-3.5 h-3.5" />
           </button>
@@ -227,6 +146,7 @@ export const TitleBar = ({
             onClick={handleClose}
             className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-500/20 hover:text-red-500 theme-text-muted transition-colors"
             title={t.controls.close}
+            aria-label={t.controls.close}
           >
             <X className="w-3.5 h-3.5" />
           </button>

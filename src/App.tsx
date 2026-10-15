@@ -122,9 +122,6 @@ function App() {
   useEffect(() => {
     document.documentElement.setAttribute("data-finish", finish);
     localStorage.setItem("clipdev_finish", finish);
-    if (window.electronAPI?.setBackgroundMaterial) {
-      window.electronAPI.setBackgroundMaterial(finish === "glass" ? "acrylic" : "none");
-    }
   }, [finish]);
 
   useEffect(() => {
@@ -284,18 +281,6 @@ function App() {
     setMode((prev) => (prev === "dark" ? "light" : "dark"));
   };
 
-  const handleToggleLang = () => {
-    setLang((prev) => (prev === "es" ? "en" : "es"));
-  };
-
-  const handleCycleFontSize = () => {
-    setFontSize((prev) => {
-      if (prev === "normal") return "large";
-      if (prev === "large") return "xlarge";
-      return "normal";
-    });
-  };
-
   const handleToggleFinish = () => {
     setFinish((prev) => (prev === "solid" ? "glass" : "solid"));
   };
@@ -337,9 +322,9 @@ function App() {
         mode={mode}
         onToggleMode={handleToggleMode}
         lang={lang}
-        onToggleLang={handleToggleLang}
+        onSelectLang={setLang}
         fontSize={fontSize}
-        onCycleFontSize={handleCycleFontSize}
+        onSelectFontSize={setFontSize}
         finish={finish}
         onToggleFinish={handleToggleFinish}
       />
@@ -444,8 +429,9 @@ function App() {
                   <motion.button
                     whileTap={{ scale: 0.94 }}
                     onClick={() => setIsConfirmClearOpen(true)}
-                    className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-zinc-400 hover:text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors shadow-sm"
+                    className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium theme-text-muted hover:text-rose-400 hover:bg-rose-500/15 border border-transparent hover:border-rose-500/30 transition-colors shadow-sm"
                     title={t.search.clearTooltip}
+                    aria-label={t.search.clearTooltip}
                   >
                     <Trash2 className="w-3.5 h-3.5 text-red-500/70" />
                     <span>{t.search.clearHistory}</span>
