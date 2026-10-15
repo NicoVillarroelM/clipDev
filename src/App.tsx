@@ -9,7 +9,7 @@ import { ClipSkeleton } from "./components/ClipSkeleton";
 import { NotesView } from "./components/NotesView";
 import { detectContentType } from "./utils/detector";
 import type { ClipItem, NoteItem, ActiveTab, FilterType } from "./types/clip";
-import type { ThemeId, ThemeMode, FontSize } from "./types/theme";
+import type { ThemeId, ThemeMode, FontSize, AppFinish } from "./types/theme";
 import { translations, type Language } from "./locales/translations";
 
 function App() {
@@ -38,6 +38,15 @@ function App() {
       return (saved as ThemeMode) || "dark";
     } catch {
       return "dark";
+    }
+  });
+
+  const [finish, setFinish] = useState<AppFinish>(() => {
+    try {
+      const saved = localStorage.getItem("clipdev_finish");
+      return (saved as AppFinish) || "solid";
+    } catch {
+      return "solid";
     }
   });
 
@@ -109,6 +118,14 @@ function App() {
     document.documentElement.setAttribute("data-theme", currentTheme);
     localStorage.setItem("clipdev_theme", currentTheme);
   }, [currentTheme]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-finish", finish);
+    localStorage.setItem("clipdev_finish", finish);
+    if (window.electronAPI?.setBackgroundMaterial) {
+      window.electronAPI.setBackgroundMaterial(finish === "glass" ? "acrylic" : "none");
+    }
+  }, [finish]);
 
   useEffect(() => {
     const factor = fontSize === "xlarge" ? 1.25 : fontSize === "large" ? 1.12 : 1.0;
@@ -279,6 +296,10 @@ function App() {
     });
   };
 
+  const handleToggleFinish = () => {
+    setFinish((prev) => (prev === "solid" ? "glass" : "solid"));
+  };
+
   const filteredClips = useMemo(() => {
     return clips.filter((clip) => {
       if (activeFilter === "pinned" && !clip.pinned) return false;
@@ -303,6 +324,7 @@ function App() {
       data-theme={currentTheme}
       data-mode={mode}
       data-font-size={fontSize}
+      data-finish={finish}
       className="flex flex-col h-screen w-screen theme-bg-app theme-text-app overflow-hidden font-sans select-none transition-colors duration-200"
     >
       <TitleBar
@@ -318,6 +340,8 @@ function App() {
         onToggleLang={handleToggleLang}
         fontSize={fontSize}
         onCycleFontSize={handleCycleFontSize}
+        finish={finish}
+        onToggleFinish={handleToggleFinish}
       />
 
       <motion.div

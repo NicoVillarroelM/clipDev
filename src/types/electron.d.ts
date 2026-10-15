@@ -5,6 +5,7 @@ export interface ElectronAPI {
   minimizeWindow: () => void;
   closeWindow: () => void;
   setZoomFactor?: (factor: number) => void;
+  setBackgroundMaterial?: (material: "none" | "acrylic" | "mica") => void;
   saveClipsToDisk?: (json: string) => void;
   saveNotesToDisk?: (json: string) => void;
   loadStorageFromDisk?: () => Promise<{

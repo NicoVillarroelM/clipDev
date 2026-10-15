@@ -32,9 +32,9 @@ function createWindow() {
     width: 820,
     height: 580,
     minWidth: 550,
-    minHeight: 420,
-    frame: false, // Ventana personalizada moderna sin marcos nativos toscos
-    backgroundColor: "#09090b",
+    frame: false,
+    backgroundMaterial: "acrylic",
+    backgroundColor: "#00000000",
     icon: iconPath,
     show: false,
     webPreferences: {
@@ -167,6 +167,16 @@ ipcMain.on("window:minimize", () => {
 
 ipcMain.on("window:close", () => {
   win?.hide();
+});
+
+ipcMain.on("window:set-background-material", (_event, material: "none" | "acrylic" | "mica") => {
+  if (win && typeof win.setBackgroundMaterial === "function") {
+    try {
+      win.setBackgroundMaterial(material);
+    } catch (err) {
+      console.warn("setBackgroundMaterial not supported:", err);
+    }
+  }
 });
 
 // Persistencia física en archivos JSON en el disco local del usuario (100% privado, offline y permanente)

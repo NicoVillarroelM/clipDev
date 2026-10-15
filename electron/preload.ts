@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   minimizeWindow: () => ipcRenderer.send("window:minimize"),
   closeWindow: () => ipcRenderer.send("window:close"),
   setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor),
+  setBackgroundMaterial: (material: "none" | "acrylic" | "mica") =>
+    ipcRenderer.send("window:set-background-material", material),
   saveClipsToDisk: (json: string) => ipcRenderer.send("storage:save-clips", json),
   saveNotesToDisk: (json: string) => ipcRenderer.send("storage:save-notes", json),
   loadStorageFromDisk: () => ipcRenderer.invoke("storage:load-disk"),

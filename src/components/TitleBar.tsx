@@ -1,8 +1,8 @@
-import { Minus, X, Clipboard, StickyNote, Sun, Moon, Languages, Type } from "lucide-react";
+import { Minus, X, Clipboard, StickyNote, Sun, Moon, Languages, Type, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeSelector } from "./ThemeSelector";
 import type { ActiveTab } from "../types/clip";
-import type { ThemeId, ThemeMode, FontSize } from "../types/theme";
+import type { ThemeId, ThemeMode, FontSize, AppFinish } from "../types/theme";
 import { translations, type Language } from "../locales/translations";
 import clipLogo from "../assets/clipDev_logo.png";
 
@@ -19,6 +19,8 @@ interface TitleBarProps {
   onToggleLang: () => void;
   fontSize: FontSize;
   onCycleFontSize: () => void;
+  finish: AppFinish;
+  onToggleFinish: () => void;
 }
 
 export const TitleBar = ({
@@ -34,6 +36,8 @@ export const TitleBar = ({
   onToggleLang,
   fontSize,
   onCycleFontSize,
+  finish,
+  onToggleFinish,
 }: TitleBarProps) => {
   const t = translations[lang];
 
@@ -181,6 +185,22 @@ export const TitleBar = ({
             <Moon className="w-3.5 h-3.5 text-blue-500" />
           )}
         </button>
+
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={onToggleFinish}
+          className={`titlebar-no-drag flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-semibold transition-all shadow-sm ${
+            finish === "glass"
+              ? "theme-accent-subtle theme-accent-text theme-accent-border border"
+              : "theme-bg-panel hover:theme-accent-subtle theme-border-app theme-text-app"
+          }`}
+          title={finish === "glass" ? t.controls.finishSolid : t.controls.finishGlass}
+        >
+          <Sparkles className={`w-3.5 h-3.5 ${finish === "glass" ? "theme-accent-text" : "theme-text-muted"}`} />
+          <span className="text-[10px] hidden xl:inline font-mono tracking-tight font-bold">
+            {finish === "glass" ? "Glass" : "Solid"}
+          </span>
+        </motion.button>
 
         <button
           onClick={onToggleLang}

@@ -20,6 +20,9 @@ export const translations = {
       fontLarge: "Grande (112%)",
       fontXLarge: "Muy grande (125%)",
       scaleToast: "Escala",
+      finishSolid: "Acabado clásico sólido",
+      finishGlass: "Acabado cristal translúcido",
+      finishToggle: "Cambiar acabado (Sólido / Cristal)",
     },
     search: {
       placeholder: "Buscar en tu historial (código, enlaces, colores)...",
@@ -123,6 +126,9 @@ export const translations = {
       fontLarge: "Large (112%)",
       fontXLarge: "Extra Large (125%)",
       scaleToast: "Scale",
+      finishSolid: "Classic solid finish",
+      finishGlass: "Translucent glass finish",
+      finishToggle: "Toggle finish (Solid / Glass)",
     },
     search: {
       placeholder: "Search history (code, links, colors)...",
