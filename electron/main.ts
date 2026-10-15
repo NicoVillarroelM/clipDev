@@ -1,4 +1,5 @@
 import { app, BrowserWindow, clipboard, globalShortcut, ipcMain, shell, session } from "electron";
+import { autoUpdater } from "electron-updater";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -32,9 +33,9 @@ function createWindow() {
     width: 820,
     height: 580,
     minWidth: 550,
-    minHeight: 420,
-    frame: false, // Ventana personalizada moderna sin marcos nativos toscos
-    backgroundColor: "#09090b",
+    frame: false,
+    backgroundMaterial: "acrylic",
+    backgroundColor: "#00000000",
     icon: iconPath,
     show: false,
     webPreferences: {
@@ -118,6 +119,14 @@ app.whenReady().then(() => {
   createWindow();
   startClipboardWatcher();
 
+  if (app.isPackaged) {
+    setTimeout(() => {
+      autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+        console.warn("Auto-update check failed:", err);
+      });
+    }, 4000);
+  }
+
   // Atajo global para abrir/cerrar la ventana desde cualquier lugar
   globalShortcut.register("CommandOrControl+Shift+V", () => {
     if (!win) return;
@@ -167,6 +176,29 @@ ipcMain.on("window:minimize", () => {
 
 ipcMain.on("window:close", () => {
   win?.hide();
+});
+
+ipcMain.on("window:set-background-material", (_event, material: "none" | "acrylic" | "mica") => {
+  if (win && typeof win.setBackgroundMaterial === "function") {
+    try {
+      win.setBackgroundMaterial(material);
+    } catch (err) {
+      console.warn("setBackgroundMaterial not supported:", err);
+    }
+  }
+});
+
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
+
+autoUpdater.on("update-downloaded", (info) => {
+  if (win && !win.isDestroyed()) {
+    win.webContents.send("update:downloaded", info.version);
+  }
+});
+
+ipcMain.on("app:restart-and-install", () => {
+  autoUpdater.quitAndInstall();
 });
 
 // Persistencia física en archivos JSON en el disco local del usuario (100% privado, offline y permanente)

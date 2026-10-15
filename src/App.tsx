@@ -9,7 +9,7 @@ import { ClipSkeleton } from "./components/ClipSkeleton";
 import { NotesView } from "./components/NotesView";
 import { detectContentType } from "./utils/detector";
 import type { ClipItem, NoteItem, ActiveTab, FilterType } from "./types/clip";
-import type { ThemeId, ThemeMode, FontSize } from "./types/theme";
+import type { ThemeId, ThemeMode, FontSize, AppFinish } from "./types/theme";
 import { translations, type Language } from "./locales/translations";
 
 function App() {
@@ -38,6 +38,15 @@ function App() {
       return (saved as ThemeMode) || "dark";
     } catch {
       return "dark";
+    }
+  });
+
+  const [finish, setFinish] = useState<AppFinish>(() => {
+    try {
+      const saved = localStorage.getItem("clipdev_finish");
+      return (saved as AppFinish) || "solid";
+    } catch {
+      return "solid";
     }
   });
 
@@ -109,6 +118,11 @@ function App() {
     document.documentElement.setAttribute("data-theme", currentTheme);
     localStorage.setItem("clipdev_theme", currentTheme);
   }, [currentTheme]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-finish", finish);
+    localStorage.setItem("clipdev_finish", finish);
+  }, [finish]);
 
   useEffect(() => {
     const factor = fontSize === "xlarge" ? 1.25 : fontSize === "large" ? 1.12 : 1.0;
@@ -267,16 +281,8 @@ function App() {
     setMode((prev) => (prev === "dark" ? "light" : "dark"));
   };
 
-  const handleToggleLang = () => {
-    setLang((prev) => (prev === "es" ? "en" : "es"));
-  };
-
-  const handleCycleFontSize = () => {
-    setFontSize((prev) => {
-      if (prev === "normal") return "large";
-      if (prev === "large") return "xlarge";
-      return "normal";
-    });
+  const handleToggleFinish = () => {
+    setFinish((prev) => (prev === "solid" ? "glass" : "solid"));
   };
 
   const filteredClips = useMemo(() => {
@@ -303,6 +309,7 @@ function App() {
       data-theme={currentTheme}
       data-mode={mode}
       data-font-size={fontSize}
+      data-finish={finish}
       className="flex flex-col h-screen w-screen theme-bg-app theme-text-app overflow-hidden font-sans select-none transition-colors duration-200"
     >
       <TitleBar
@@ -315,9 +322,11 @@ function App() {
         mode={mode}
         onToggleMode={handleToggleMode}
         lang={lang}
-        onToggleLang={handleToggleLang}
+        onSelectLang={setLang}
         fontSize={fontSize}
-        onCycleFontSize={handleCycleFontSize}
+        onSelectFontSize={setFontSize}
+        finish={finish}
+        onToggleFinish={handleToggleFinish}
       />
 
       <motion.div
@@ -420,8 +429,9 @@ function App() {
                   <motion.button
                     whileTap={{ scale: 0.94 }}
                     onClick={() => setIsConfirmClearOpen(true)}
-                    className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-zinc-400 hover:text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors shadow-sm"
+                    className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium theme-text-muted hover:text-rose-400 hover:bg-rose-500/15 border border-transparent hover:border-rose-500/30 transition-colors shadow-sm"
                     title={t.search.clearTooltip}
+                    aria-label={t.search.clearTooltip}
                   >
                     <Trash2 className="w-3.5 h-3.5 text-red-500/70" />
                     <span>{t.search.clearHistory}</span>

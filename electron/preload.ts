@@ -12,7 +12,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
   minimizeWindow: () => ipcRenderer.send("window:minimize"),
   closeWindow: () => ipcRenderer.send("window:close"),
   setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor),
+  setBackgroundMaterial: (material: "none" | "acrylic" | "mica") =>
+    ipcRenderer.send("window:set-background-material", material),
   saveClipsToDisk: (json: string) => ipcRenderer.send("storage:save-clips", json),
   saveNotesToDisk: (json: string) => ipcRenderer.send("storage:save-notes", json),
   loadStorageFromDisk: () => ipcRenderer.invoke("storage:load-disk"),
+  onUpdateDownloaded: (callback: (version: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, version: string) => callback(version);
+    ipcRenderer.on("update:downloaded", handler);
+    return () => ipcRenderer.removeListener("update:downloaded", handler);
+  },
+  restartAndInstallUpdate: () => ipcRenderer.send("app:restart-and-install"),
 });

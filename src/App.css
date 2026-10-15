@@ -32,6 +32,68 @@
   --scrollbar-thumb: rgba(0, 0, 0, 0.15);
 }
 
+html, body {
+  background-color: transparent;
+}
+
+[data-finish="glass"][data-mode="dark"] {
+  --bg-app: rgba(12, 12, 16, 0.72);
+  --bg-header: rgba(18, 18, 24, 0.65);
+  --bg-panel: rgba(20, 20, 26, 0.75);
+  --bg-card: rgba(22, 22, 28, 0.90);
+  --bg-card-hover: rgba(30, 30, 38, 0.95);
+  --bg-input: rgba(14, 14, 19, 0.80);
+  --border-app: rgba(255, 255, 255, 0.08);
+  --border-card: rgba(255, 255, 255, 0.08);
+}
+
+[data-finish="glass"][data-mode="light"] {
+  --bg-app: rgba(244, 246, 250, 0.75);
+  --bg-header: rgba(255, 255, 255, 0.70);
+  --bg-panel: rgba(255, 255, 255, 0.78);
+  --bg-card: rgba(255, 255, 255, 0.92);
+  --bg-card-hover: #ffffff;
+  --bg-input: rgba(255, 255, 255, 0.82);
+  --border-app: rgba(0, 0, 0, 0.07);
+  --border-card: rgba(0, 0, 0, 0.07);
+}
+
+.theme-bg-app,
+.theme-bg-header {
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+[data-finish="glass"][data-mode="dark"] .theme-bg-card {
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
+}
+
+[data-finish="glass"][data-mode="dark"] .theme-bg-card:hover {
+  box-shadow: 0 6px 20px -2px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+}
+
+[data-finish="glass"][data-mode="light"] .theme-bg-card {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
+}
+
+[data-finish="glass"][data-mode="light"] .theme-bg-card:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+}
+
+.settings-popover-panel {
+  background-color: var(--bg-panel);
+}
+
+[data-finish="glass"][data-mode="dark"] .settings-popover-panel {
+  background-color: rgba(22, 22, 28, 0.98);
+  box-shadow: 0 20px 48px -4px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+}
+
+[data-finish="glass"][data-mode="light"] .settings-popover-panel {
+  background-color: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 20px 48px -4px rgba(0, 0, 0, 0.18), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+}
+
 /* Escalas de tamaño de texto e interfaz para accesibilidad */
 :root,
 [data-font-size="normal"] {
@@ -152,22 +214,27 @@
 /* Clases de utilidad para el tema */
 .theme-bg-app {
   background-color: var(--bg-app);
+  transition: background-color 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .theme-bg-header {
   background-color: var(--bg-header);
+  transition: background-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease;
 }
 
 .theme-bg-panel {
   background-color: var(--bg-panel);
+  transition: background-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease;
 }
 
 .theme-bg-card {
   background-color: var(--bg-card);
+  transition: background-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .theme-bg-input {
   background-color: var(--bg-input);
+  transition: background-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease;
 }
 
 .theme-border-app {
@@ -234,6 +301,13 @@ button,
 input[type="button"],
 input[type="submit"] {
   cursor: pointer !important;
+}
+
+button:focus-visible,
+input:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 1px !important;
 }
 
 /* Estilos para el Editor Enriquecido de Notas */

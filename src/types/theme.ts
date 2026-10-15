@@ -1,6 +1,7 @@
 export type ThemeId = "amber" | "emerald" | "violet" | "blue" | "rose" | "cyan";
 export type ThemeMode = "dark" | "light";
 export type FontSize = "normal" | "large" | "xlarge";
+export type AppFinish = "solid" | "glass";
 
 export interface ThemeOption {
   id: ThemeId;

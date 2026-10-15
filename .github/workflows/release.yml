@@ -40,6 +40,8 @@ jobs:
           files: |
             release/*.exe
             release/*.zip
+            release/latest.yml
+            release/*.blockmap
           draft: false
           prerelease: false
         env:

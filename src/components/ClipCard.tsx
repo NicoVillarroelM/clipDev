@@ -137,6 +137,7 @@ export const ClipCard = ({
             onClick={() => onOpenModal(clip)}
             className="p-1.5 rounded-md theme-text-muted hover:theme-accent-text hover:theme-accent-subtle transition-colors"
             title={t.cards.fullView}
+            aria-label={t.cards.fullView}
           >
             <Maximize2 className="w-3.5 h-3.5" />
           </motion.button>
@@ -150,6 +151,7 @@ export const ClipCard = ({
                 : "theme-text-muted hover:theme-text-app hover:bg-zinc-500/10"
             }`}
             title={clip.pinned ? t.cards.unpin : t.cards.pin}
+            aria-label={clip.pinned ? t.cards.unpin : t.cards.pin}
           >
             <Pin className={`w-3.5 h-3.5 ${clip.pinned ? "fill-current" : ""}`} />
           </motion.button>
@@ -163,6 +165,7 @@ export const ClipCard = ({
                 : "theme-text-muted hover:theme-text-app hover:bg-zinc-500/10"
             }`}
             title={t.cards.copyAgain}
+            aria-label={t.cards.copyAgain}
           >
             <AnimatePresence mode="wait">
               {copied ? (
@@ -192,6 +195,7 @@ export const ClipCard = ({
             onClick={() => onDelete(clip)}
             className="p-1.5 rounded-md theme-text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors"
             title={t.cards.delete}
+            aria-label={t.cards.delete}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </motion.button>
@@ -239,18 +243,6 @@ export const ClipCard = ({
                 <span>{t.cards.showMore}</span>
               </>
             )}
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenModal(clip);
-            }}
-            className="flex items-center gap-1 text-[11px] font-medium theme-text-muted hover:theme-accent-text transition-colors"
-            title={t.cards.fullView}
-          >
-            <Maximize2 className="w-3 h-3" />
-            <span>{t.cards.fullView}</span>
           </button>
         </div>
       )}
