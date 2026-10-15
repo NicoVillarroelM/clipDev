@@ -23,4 +23,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener("update:downloaded", handler);
   },
   restartAndInstallUpdate: () => ipcRenderer.send("app:restart-and-install"),
+  writeClipboardImage: (dataUrl: string) => ipcRenderer.send("clipboard:write-image", dataUrl),
+  getCurrentClipboardImage: () => ipcRenderer.invoke("clipboard:get-current-image"),
+  onClipboardImageUpdate: (callback: (data: { content: string; width: number; height: number; sizeLabel: string }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, value: any) => callback(value);
+    ipcRenderer.on("clipboard:updated-image", handler);
+    return () => ipcRenderer.removeListener("clipboard:updated-image", handler);
+  },
 });

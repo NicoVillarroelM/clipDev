@@ -8,6 +8,7 @@ import {
   Code2,
   Link,
   FileText,
+  Image as ImageIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ClipItem } from "../types/clip";
@@ -54,6 +55,13 @@ export const ClipModal = ({
 
   const renderBadge = (clipItem: ClipItem) => {
     switch (clipItem.type) {
+      case "image":
+        return (
+          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+            <ImageIcon className="w-3.5 h-3.5" />
+            {t.cards.badgeImage}
+          </span>
+        );
       case "color":
         return (
           <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-500 border border-purple-500/20">
@@ -112,13 +120,25 @@ export const ClipModal = ({
             <div className="flex items-center justify-between p-4 border-b theme-border-app theme-bg-header">
               <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
                 {renderBadge(clip)}
-                <span className="text-xs theme-text-muted font-mono">
-                  {clip.content.split("\n").length} {t.cards.lines}
-                </span>
-                <span className="text-xs theme-text-muted font-mono opacity-60">·</span>
-                <span className="text-xs theme-text-muted font-mono">
-                  {clip.content.length.toLocaleString()} {t.cards.chars}
-                </span>
+                {clip.type === "image" ? (
+                  <>
+                    {clip.imageWidth && clip.imageHeight && (
+                      <span className="text-xs theme-text-muted font-mono">
+                        {clip.imageWidth} × {clip.imageHeight} px
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xs theme-text-muted font-mono">
+                      {clip.content.split("\n").length} {t.cards.lines}
+                    </span>
+                    <span className="text-xs theme-text-muted font-mono opacity-60">·</span>
+                    <span className="text-xs theme-text-muted font-mono">
+                      {clip.content.length.toLocaleString()} {t.cards.chars}
+                    </span>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -173,10 +193,18 @@ export const ClipModal = ({
               </div>
             </div>
 
-            <div className="flex-1 p-4 overflow-y-auto overflow-x-auto theme-bg-input">
-              <pre className="font-mono theme-code-size whitespace-pre-wrap break-words leading-relaxed select-text theme-text-app m-0 p-0 font-normal">
-                {clip.content}
-              </pre>
+            <div className="flex-1 p-4 overflow-y-auto overflow-x-auto theme-bg-input flex items-center justify-center">
+              {clip.type === "image" ? (
+                <img
+                  src={clip.content}
+                  alt="Clipboard full resolution"
+                  className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-lg select-none"
+                />
+              ) : (
+                <pre className="font-mono theme-code-size whitespace-pre-wrap break-words leading-relaxed select-text theme-text-app m-0 p-0 font-normal w-full">
+                  {clip.content}
+                </pre>
+              )}
             </div>
 
             <div className="px-4 py-2 border-t theme-border-app theme-bg-header flex items-center justify-between text-[11px] theme-text-muted">

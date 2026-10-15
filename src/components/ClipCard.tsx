@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronUp,
   Maximize2,
+  Image as ImageIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ClipItem } from "../types/clip";
@@ -36,9 +37,9 @@ export const ClipCard = ({
   const [expanded, setExpanded] = useState(false);
   const t = translations[lang];
 
-  const lines = clip.content.split("\n");
+  const lines = clip.type === "image" ? [] : clip.content.split("\n");
   const isMultiLine = lines.length > 1;
-  const isLong = lines.length > 5 || clip.content.length > 250;
+  const isLong = clip.type !== "image" && (lines.length > 5 || clip.content.length > 250);
 
   const handleCopy = () => {
     onCopy(clip.content);
@@ -48,6 +49,18 @@ export const ClipCard = ({
 
   const renderBadge = () => {
     switch (clip.type) {
+      case "image":
+        return (
+          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+            <ImageIcon className="w-3 h-3" />
+            {t.cards.badgeImage}
+            {clip.imageWidth && clip.imageHeight && (
+              <span className="ml-1 opacity-75 font-mono text-[10px]">
+                ({clip.imageWidth}×{clip.imageHeight})
+              </span>
+            )}
+          </span>
+        );
       case "color":
         return (
           <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-purple-500/10 text-purple-500 border border-purple-500/20">
@@ -202,28 +215,43 @@ export const ClipCard = ({
         </div>
       </div>
 
-      <div
-        onClick={() => {
-          const selection = window.getSelection();
-          if (selection && selection.toString().length > 0) return;
-          handleCopy();
-        }}
-        className={`relative cursor-pointer font-mono theme-code-size theme-text-app select-text theme-bg-input p-3 rounded-lg border theme-border-app hover:theme-accent-border transition-[max-height] duration-300 ease-in-out shadow-inner ${
-          isLong && !expanded
-            ? "max-h-32 overflow-hidden"
-            : "max-h-80 overflow-y-auto overflow-x-auto"
-        }`}
-      >
-        <pre className="font-mono theme-code-size whitespace-pre-wrap break-words leading-relaxed select-text m-0 p-0 font-normal">
-          {clip.content}
-        </pre>
+      {clip.type === "image" ? (
+        <div
+          onClick={handleCopy}
+          className="relative cursor-pointer rounded-lg border theme-border-app hover:theme-accent-border transition-all overflow-hidden theme-bg-input p-2 flex items-center justify-center group/img"
+        >
+          <img
+            src={clip.content}
+            alt="Clipboard thumbnail"
+            className="max-h-52 max-w-full rounded object-contain select-none shadow-sm"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 transition-colors pointer-events-none" />
+        </div>
+      ) : (
+        <div
+          onClick={() => {
+            const selection = window.getSelection();
+            if (selection && selection.toString().length > 0) return;
+            handleCopy();
+          }}
+          className={`relative cursor-pointer font-mono theme-code-size theme-text-app select-text theme-bg-input p-3 rounded-lg border theme-border-app hover:theme-accent-border transition-[max-height] duration-300 ease-in-out shadow-inner ${
+            isLong && !expanded
+              ? "max-h-32 overflow-hidden"
+              : "max-h-80 overflow-y-auto overflow-x-auto"
+          }`}
+        >
+          <pre className="font-mono theme-code-size whitespace-pre-wrap break-words leading-relaxed select-text m-0 p-0 font-normal">
+            {clip.content}
+          </pre>
 
-        {isLong && !expanded && (
-          <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[var(--bg-input)] to-transparent pointer-events-none" />
-        )}
-      </div>
+          {isLong && !expanded && (
+            <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[var(--bg-input)] to-transparent pointer-events-none" />
+          )}
+        </div>
+      )}
 
-      {isLong && (
+      {clip.type !== "image" && isLong && (
         <div className="flex items-center gap-3 mt-1.5">
           <button
             onClick={(e) => {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Search, X, Trash2, Pin, Code2, Link, Palette, Layers, Type } from "lucide-react";
+import { Search, X, Trash2, Pin, Code2, Link, Palette, Layers, Type, Image as ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TitleBar } from "./components/TitleBar";
 import { ClipCard } from "./components/ClipCard";
@@ -169,13 +169,17 @@ function App() {
 
   useEffect(() => {
     const json = JSON.stringify(clips);
-    localStorage.setItem("clipdev_clips", json);
+    try {
+      localStorage.setItem("clipdev_clips", json);
+    } catch {}
     window.electronAPI?.saveClipsToDisk?.(json);
   }, [clips]);
 
   useEffect(() => {
     const json = JSON.stringify(notes);
-    localStorage.setItem("clipdev_notes", json);
+    try {
+      localStorage.setItem("clipdev_notes", json);
+    } catch {}
     window.electronAPI?.saveNotesToDisk?.(json);
   }, [notes]);
 
@@ -212,22 +216,65 @@ function App() {
       });
     };
 
+    const addImageClip = (data: { content: string; width: number; height: number; sizeLabel: string }) => {
+      setClips((prev) => {
+        const existingIndex = prev.findIndex((c) => c.type === "image" && c.content === data.content);
+
+        if (existingIndex !== -1) {
+          const item = prev[existingIndex];
+          const updated = { ...item, createdAt: Date.now() };
+          const rest = prev.filter((_, i) => i !== existingIndex);
+          return [updated, ...rest];
+        }
+
+        const newClip: ClipItem = {
+          id: crypto.randomUUID(),
+          content: data.content,
+          type: "image",
+          imageWidth: data.width,
+          imageHeight: data.height,
+          imageSize: data.sizeLabel,
+          pinned: false,
+          createdAt: Date.now(),
+        };
+
+        return [newClip, ...prev].slice(0, 150);
+      });
+    };
+
     window.electronAPI.getCurrentClipboard().then((text) => {
       if (text) addClip(text);
     });
+
+    if (window.electronAPI.getCurrentClipboardImage) {
+      window.electronAPI.getCurrentClipboardImage().then((img) => {
+        if (img) addImageClip(img);
+      });
+    }
 
     const cleanup = window.electronAPI.onClipboardUpdate((newText) => {
       addClip(newText);
     });
 
-    return () => cleanup();
+    const cleanupImage = window.electronAPI.onClipboardImageUpdate?.((img) => {
+      addImageClip(img);
+    });
+
+    return () => {
+      cleanup();
+      cleanupImage?.();
+    };
   }, []);
 
-  const handleCopy = (text: string) => {
+  const handleCopy = (content: string) => {
+    if (content.startsWith("data:image/") && window.electronAPI?.writeClipboardImage) {
+      window.electronAPI.writeClipboardImage(content);
+      return;
+    }
     if (window.electronAPI) {
-      window.electronAPI.writeClipboard(text);
+      window.electronAPI.writeClipboard(content);
     } else {
-      navigator.clipboard.writeText(text);
+      navigator.clipboard.writeText(content);
     }
   };
 
@@ -291,8 +338,12 @@ function App() {
       if (activeFilter === "code" && clip.type !== "code") return false;
       if (activeFilter === "url" && clip.type !== "url") return false;
       if (activeFilter === "color" && clip.type !== "color") return false;
+      if (activeFilter === "image" && clip.type !== "image") return false;
 
       if (searchQuery.trim() !== "") {
+        if (clip.type === "image") {
+          return t.filters.image.toLowerCase().includes(searchQuery.toLowerCase().trim());
+        }
         return clip.content
           .toLowerCase()
           .includes(searchQuery.toLowerCase().trim());
@@ -300,7 +351,7 @@ function App() {
 
       return true;
     });
-  }, [clips, activeFilter, searchQuery]);
+  }, [clips, activeFilter, searchQuery, t.filters.image]);
 
   const unpinnedCount = useMemo(() => clips.filter((c) => !c.pinned).length, [clips]);
 
@@ -422,6 +473,18 @@ function App() {
                   >
                     <Palette className="w-3 h-3 text-purple-500" />
                     <span>{t.filters.color}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveFilter("image")}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shadow-sm ${
+                      activeFilter === "image"
+                        ? "theme-accent-subtle theme-accent-text theme-accent-border border font-medium"
+                        : "theme-bg-app theme-text-muted hover:theme-text-app border theme-border-app"
+                    }`}
+                  >
+                    <ImageIcon className="w-3 h-3 text-emerald-500" />
+                    <span>{t.filters.image}</span>
                   </button>
                 </div>
 
