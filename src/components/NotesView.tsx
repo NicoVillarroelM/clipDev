@@ -18,6 +18,9 @@ import {
   Undo,
   Redo,
   HardDrive,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { NoteItem, NoteColor } from "../types/clip";
@@ -51,10 +54,40 @@ export const NotesView = ({
     notes[0]?.id || null
   );
   const [copied, setCopied] = useState(false);
+  const [selectedImg, setSelectedImg] = useState<HTMLImageElement | null>(null);
+  const [overlayPos, setOverlayPos] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
+
   const editorRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const t = translations[lang];
 
   const selectedNote = notes.find((n) => n.id === selectedNoteId);
+
+  const updateOverlayPosition = () => {
+    if (!selectedImg || !scrollContainerRef.current) {
+      setOverlayPos(null);
+      return;
+    }
+    if (!selectedImg.isConnected) {
+      setSelectedImg(null);
+      setOverlayPos(null);
+      return;
+    }
+    const contRect = scrollContainerRef.current.getBoundingClientRect();
+    const imgRect = selectedImg.getBoundingClientRect();
+    setOverlayPos({
+      top: imgRect.top - contRect.top + scrollContainerRef.current.scrollTop,
+      left: imgRect.left - contRect.left + scrollContainerRef.current.scrollLeft,
+      width: imgRect.width,
+      height: imgRect.height,
+    });
+  };
 
   useEffect(() => {
     if (editorRef.current) {
@@ -68,7 +101,32 @@ export const NotesView = ({
         editorRef.current.innerHTML = "";
       }
     }
+    if (selectedImg) {
+      selectedImg.removeAttribute("data-selected");
+    }
+    setSelectedImg(null);
+    setOverlayPos(null);
   }, [selectedNoteId]);
+
+  useEffect(() => {
+    updateOverlayPosition();
+    window.addEventListener("resize", updateOverlayPosition);
+    return () => window.removeEventListener("resize", updateOverlayPosition);
+  }, [selectedImg]);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (selectedImg && (e.key === "Delete" || e.key === "Backspace")) {
+        const activeEl = document.activeElement;
+        if (activeEl?.tagName !== "INPUT" && activeEl?.tagName !== "TEXTAREA") {
+          e.preventDefault();
+          deleteSelectedImage();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [selectedImg]);
 
   const handleCreateNote = () => {
     const newNote: NoteItem = {
@@ -119,7 +177,123 @@ export const NotesView = ({
     handleEditorInput();
   };
 
+  const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target && target.tagName === "IMG") {
+      e.stopPropagation();
+      if (selectedImg && selectedImg !== target) {
+        selectedImg.removeAttribute("data-selected");
+      }
+      target.setAttribute("data-selected", "true");
+      setSelectedImg(target as HTMLImageElement);
+    } else {
+      if (selectedImg) {
+        selectedImg.removeAttribute("data-selected");
+      }
+      setSelectedImg(null);
+      setOverlayPos(null);
+    }
+  };
+
+  const handleContainerClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName !== "IMG" && !target.closest("[data-image-toolbar]")) {
+      if (selectedImg) {
+        selectedImg.removeAttribute("data-selected");
+      }
+      setSelectedImg(null);
+      setOverlayPos(null);
+    }
+  };
+
+  const applyImageSize = (size: "25%" | "50%" | "75%" | "100%") => {
+    if (!selectedImg) return;
+    selectedImg.style.width = size;
+    selectedImg.style.maxWidth = "100%";
+    selectedImg.style.height = "auto";
+    updateOverlayPosition();
+    handleEditorInput();
+  };
+
+  const applyImageAlignment = (align: "left" | "center" | "right") => {
+    if (!selectedImg) return;
+    selectedImg.style.display = "block";
+    if (align === "center") {
+      selectedImg.style.marginLeft = "auto";
+      selectedImg.style.marginRight = "auto";
+    } else if (align === "right") {
+      selectedImg.style.marginLeft = "auto";
+      selectedImg.style.marginRight = "0";
+    } else {
+      selectedImg.style.marginLeft = "0";
+      selectedImg.style.marginRight = "auto";
+    }
+    updateOverlayPosition();
+    handleEditorInput();
+  };
+
+  const deleteSelectedImage = () => {
+    if (!selectedImg) return;
+    selectedImg.remove();
+    setSelectedImg(null);
+    setOverlayPos(null);
+    handleEditorInput();
+  };
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!selectedImg || !scrollContainerRef.current) return;
+
+    setIsResizing(true);
+    const startX = e.clientX;
+    const startWidth = selectedImg.offsetWidth;
+    const contWidth = scrollContainerRef.current.clientWidth - 48;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const newWidth = Math.max(80, Math.min(startWidth + deltaX, contWidth));
+      selectedImg.style.width = `${newWidth}px`;
+      selectedImg.style.maxWidth = "100%";
+      selectedImg.style.height = "auto";
+      updateOverlayPosition();
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      handleEditorInput();
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const items = e.clipboardData?.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith("image/")) {
+          e.preventDefault();
+          const file = items[i].getAsFile();
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const dataUrl = event.target?.result as string;
+              if (dataUrl) {
+                const imgHtml = `<img src="${dataUrl}" style="max-width: 100%; width: 50%; border-radius: 8px; margin: 12px 0; display: block;" alt="Note image" />`;
+                document.execCommand("insertHTML", false, imgHtml);
+                handleEditorInput();
+              }
+            };
+            reader.readAsDataURL(file);
+            return;
+          }
+        }
+      }
+    }
+
     const html = e.clipboardData.getData("text/html");
     const text = e.clipboardData.getData("text/plain");
 
@@ -396,7 +570,12 @@ export const NotesView = ({
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 theme-bg-app">
+            <div
+              ref={scrollContainerRef}
+              onClick={handleContainerClick}
+              onScroll={updateOverlayPosition}
+              className="flex-1 overflow-y-auto p-4 theme-bg-app relative"
+            >
               <div
                 ref={editorRef}
                 contentEditable
@@ -404,9 +583,111 @@ export const NotesView = ({
                 onInput={handleEditorInput}
                 onPaste={handlePaste}
                 onKeyDown={handleKeyDown}
+                onClick={handleEditorClick}
                 data-placeholder={t.notes.contentPlaceholder}
                 className="note-editor-content min-h-full w-full theme-text-app text-sm leading-relaxed select-text"
               />
+
+              {selectedImg && overlayPos && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: overlayPos.top,
+                    left: overlayPos.left,
+                    width: overlayPos.width,
+                    height: overlayPos.height,
+                    pointerEvents: "none",
+                  }}
+                  className="z-30"
+                >
+                  <div
+                    data-image-toolbar="true"
+                    style={{
+                      top: overlayPos.top < 52 ? "calc(100% + 8px)" : "-44px",
+                    }}
+                    className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 theme-bg-panel border theme-border-app px-2 py-1 rounded-lg shadow-2xl backdrop-blur-md text-xs font-mono select-none pointer-events-auto z-40 whitespace-nowrap"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => applyImageSize("25%")}
+                      className="px-2 py-1 rounded theme-text-muted hover:theme-accent-text hover:theme-accent-subtle transition-colors font-medium text-[11px]"
+                      title={t.notes.imageSmall}
+                    >
+                      25%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyImageSize("50%")}
+                      className="px-2 py-1 rounded theme-text-muted hover:theme-accent-text hover:theme-accent-subtle transition-colors font-medium text-[11px]"
+                      title={t.notes.imageMedium}
+                    >
+                      50%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyImageSize("75%")}
+                      className="px-2 py-1 rounded theme-text-muted hover:theme-accent-text hover:theme-accent-subtle transition-colors font-medium text-[11px]"
+                      title={t.notes.imageLarge}
+                    >
+                      75%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyImageSize("100%")}
+                      className="px-2 py-1 rounded theme-text-muted hover:theme-accent-text hover:theme-accent-subtle transition-colors font-medium text-[11px]"
+                      title={t.notes.imageFull}
+                    >
+                      100%
+                    </button>
+
+                    <span className="w-[1px] h-3.5 bg-zinc-500/30 mx-1" />
+
+                    <button
+                      type="button"
+                      onClick={() => applyImageAlignment("left")}
+                      className="p-1.5 rounded theme-text-muted hover:theme-accent-text hover:theme-accent-subtle transition-colors"
+                      title={t.notes.alignLeft}
+                    >
+                      <AlignLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyImageAlignment("center")}
+                      className="p-1.5 rounded theme-text-muted hover:theme-accent-text hover:theme-accent-subtle transition-colors"
+                      title={t.notes.alignCenter}
+                    >
+                      <AlignCenter className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyImageAlignment("right")}
+                      className="p-1.5 rounded theme-text-muted hover:theme-accent-text hover:theme-accent-subtle transition-colors"
+                      title={t.notes.alignRight}
+                    >
+                      <AlignRight className="w-3.5 h-3.5" />
+                    </button>
+
+                    <span className="w-[1px] h-3.5 bg-zinc-500/30 mx-1" />
+
+                    <button
+                      type="button"
+                      onClick={deleteSelectedImage}
+                      className="p-1.5 rounded text-rose-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                      title={t.notes.deleteImage}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div
+                    onMouseDown={handleResizeMouseDown}
+                    className={`absolute bottom-0 right-0 w-3.5 h-3.5 theme-accent-bg border-2 border-white dark:border-zinc-900 rounded-full cursor-se-resize shadow-lg translate-x-1/2 translate-y-1/2 pointer-events-auto transition-transform ${
+                      isResizing ? "scale-150 ring-4 ring-emerald-500/40" : "hover:scale-125"
+                    }`}
+                    title={t.notes.resizeHint}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="px-4 py-1.5 border-t theme-border-app theme-bg-header flex items-center justify-between text-[11px] theme-text-muted select-none">

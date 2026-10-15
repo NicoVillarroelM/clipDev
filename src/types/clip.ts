@@ -1,4 +1,4 @@
-export type ContentType = "code" | "url" | "color" | "text";
+export type ContentType = "code" | "url" | "color" | "text" | "image";
 
 export interface ClipItem {
   id: string;
@@ -6,6 +6,9 @@ export interface ClipItem {
   type: ContentType;
   pinned: boolean;
   createdAt: number;
+  imageWidth?: number;
+  imageHeight?: number;
+  imageSize?: string;
 }
 
 export type NoteColor = "amber" | "emerald" | "blue" | "purple" | "rose" | "zinc";
@@ -19,4 +22,4 @@ export interface NoteItem {
 }
 
 export type ActiveTab = "clipboard" | "notes";
-export type FilterType = "all" | "pinned" | "code" | "url" | "color";
+export type FilterType = "all" | "pinned" | "code" | "url" | "color" | "image";

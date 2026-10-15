@@ -292,7 +292,7 @@ export const SettingsPopover = ({
             </div>
 
             <div className="pt-2.5 mt-2.5 border-t theme-border-app flex items-center justify-between text-[10px] theme-text-muted font-mono">
-              <span>ClipDev v1.0.1</span>
+              <span>ClipDev v1.0.2</span>
               <span className="theme-accent-text font-semibold">{t.app.shortcutHint}</span>
             </div>
           </motion.div>

@@ -15,6 +15,9 @@ export interface ElectronAPI {
   }>;
   onUpdateDownloaded?: (callback: (version: string) => void) => () => void;
   restartAndInstallUpdate?: () => void;
+  writeClipboardImage?: (dataUrl: string) => void;
+  getCurrentClipboardImage?: () => Promise<{ content: string; width: number; height: number; sizeLabel: string } | null>;
+  onClipboardImageUpdate?: (callback: (data: { content: string; width: number; height: number; sizeLabel: string }) => void) => () => void;
 }
 
 declare global {

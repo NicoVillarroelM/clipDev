@@ -1,7 +1,8 @@
-import { app, BrowserWindow, clipboard, globalShortcut, ipcMain, shell, session } from "electron";
+import { app, BrowserWindow, clipboard, ClipboardItem, globalShortcut, ipcMain, shell, session, nativeImage } from "electron";
 import { autoUpdater } from "electron-updater";
 import path from "node:path";
 import fs from "node:fs";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -19,6 +20,7 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 
 let win: BrowserWindow | null = null;
 let lastClipboardText = "";
+let lastImageHash = "";
 let clipboardInterval: NodeJS.Timeout | null = null;
 
 function createWindow() {
@@ -87,21 +89,80 @@ function createWindow() {
   }
 }
 
+async function readClipboardImage(): Promise<{
+  content: string;
+  width: number;
+  height: number;
+  sizeLabel: string;
+  buffer: Buffer;
+} | null> {
+  try {
+    const items = await clipboard.read();
+    for (const item of items) {
+      const imgType = item.types.find((t) => t.startsWith("image/"));
+      if (imgType) {
+        const blob = await item.getType(imgType);
+        const buffer = Buffer.from(await blob.arrayBuffer());
+        const img = nativeImage.createFromBuffer(buffer);
+        const size = img.getSize();
+        if (size.width > 0 && size.height > 0) {
+          return {
+            content: img.toDataURL(),
+            width: size.width,
+            height: size.height,
+            sizeLabel: `${size.width} × ${size.height} px`,
+            buffer,
+          };
+        }
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 // Iniciar monitoreo del portapapeles
 async function startClipboardWatcher() {
   try {
-    lastClipboardText = await clipboard.readText();
+    const rawInit = await clipboard.readText();
+    lastClipboardText = typeof rawInit === "string" ? rawInit : "";
+    const initImg = await readClipboardImage();
+    if (initImg) {
+      lastImageHash = crypto.createHash("md5").update(initImg.buffer).digest("hex");
+    }
   } catch {
     lastClipboardText = "";
+    lastImageHash = "";
   }
 
   clipboardInterval = setInterval(async () => {
     try {
-      const currentText = await clipboard.readText();
-      if (currentText && currentText.trim() !== "" && currentText !== lastClipboardText) {
+      const rawText = await clipboard.readText();
+      const currentText = typeof rawText === "string" ? rawText : "";
+      if (currentText.trim() !== "" && currentText !== lastClipboardText) {
         lastClipboardText = currentText;
+        lastImageHash = "";
         if (win && !win.isDestroyed()) {
           win.webContents.send("clipboard:updated", currentText);
+        }
+        return;
+      }
+
+      const imgData = await readClipboardImage();
+      if (imgData) {
+        const hash = crypto.createHash("md5").update(imgData.buffer).digest("hex");
+        if (hash !== lastImageHash) {
+          lastImageHash = hash;
+          lastClipboardText = "";
+          if (win && !win.isDestroyed()) {
+            win.webContents.send("clipboard:updated-image", {
+              content: imgData.content,
+              width: imgData.width,
+              height: imgData.height,
+              sizeLabel: imgData.sizeLabel,
+            });
+          }
         }
       }
     } catch (err) {
@@ -167,7 +228,26 @@ ipcMain.handle("clipboard:get-current", async () => {
 
 ipcMain.on("clipboard:write", async (_event, text: string) => {
   lastClipboardText = text; // Evita loop en el watcher
+  lastImageHash = "";
   await clipboard.writeText(text);
+});
+
+ipcMain.handle("clipboard:get-current-image", async () => {
+  return await readClipboardImage();
+});
+
+ipcMain.on("clipboard:write-image", async (_event, dataUrl: string) => {
+  try {
+    const img = nativeImage.createFromDataURL(dataUrl);
+    const buffer = img.toPNG();
+    lastImageHash = crypto.createHash("md5").update(buffer).digest("hex");
+    lastClipboardText = "";
+    const blob = new Blob([buffer], { type: "image/png" });
+    const item = new ClipboardItem({ "image/png": blob });
+    await clipboard.write([item]);
+  } catch (err) {
+    console.error("Error writing image to clipboard:", err);
+  }
 });
 
 ipcMain.on("window:minimize", () => {

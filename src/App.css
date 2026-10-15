@@ -423,3 +423,24 @@ input:focus-visible,
   opacity: 0.5;
   pointer-events: none;
 }
+
+.note-editor-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 0.75rem 0;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+
+.note-editor-content img:hover {
+  border-color: var(--accent-border);
+}
+
+.note-editor-content img[data-selected="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
