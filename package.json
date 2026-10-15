@@ -40,7 +40,8 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
+  "packageManager": "pnpm@11.8.0",
   "type": "module",
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
