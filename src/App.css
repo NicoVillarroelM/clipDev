@@ -1,0 +1,351 @@
+@import "tailwindcss";
+
+/* Variables Globales por Modo (Dark vs Light) */
+:root,
+[data-mode="dark"] {
+  --bg-app: #09090b;
+  --bg-header: #121216;
+  --bg-panel: #18181b;
+  --bg-card: #18181b;
+  --bg-card-hover: #222227;
+  --bg-input: #121215;
+  --border-app: #27272a;
+  --border-card: #27272a;
+  --text-app: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --text-faint: #71717a;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.15);
+}
+
+[data-mode="light"] {
+  --bg-app: #f8fafc;
+  --bg-header: #ffffff;
+  --bg-panel: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-input: #ffffff;
+  --border-app: #e2e8f0;
+  --border-card: #e2e8f0;
+  --text-app: #0f172a;
+  --text-muted: #475569;
+  --text-faint: #94a3b8;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+}
+
+/* Escalas de tamaño de texto e interfaz para accesibilidad */
+:root,
+[data-font-size="normal"] {
+  --text-code-size: 0.75rem;
+  --text-editor-size: 0.8125rem;
+}
+
+[data-font-size="large"] {
+  --text-code-size: 0.78125rem;
+  --text-editor-size: 0.84375rem;
+}
+
+[data-font-size="xlarge"] {
+  --text-code-size: 0.8125rem;
+  --text-editor-size: 0.875rem;
+}
+
+.theme-code-size {
+  font-size: var(--text-code-size);
+}
+
+.theme-editor-size {
+  font-size: var(--text-editor-size);
+}
+
+/* Paletas de Color en Dark Mode */
+[data-theme="amber"][data-mode="dark"],
+[data-theme="amber"] {
+  --accent: #f59e0b;
+  --accent-subtle: rgba(245, 158, 11, 0.14);
+  --accent-border: rgba(245, 158, 11, 0.4);
+  --accent-text: #fbbf24;
+  --accent-ring: rgba(245, 158, 11, 0.25);
+}
+[data-theme="amber"][data-mode="light"] {
+  --accent: #d97706;
+  --accent-subtle: rgba(245, 158, 11, 0.16);
+  --accent-border: rgba(217, 119, 6, 0.4);
+  --accent-text: #b45309;
+  --accent-ring: rgba(245, 158, 11, 0.3);
+}
+
+[data-theme="emerald"][data-mode="dark"] {
+  --accent: #10b981;
+  --accent-subtle: rgba(16, 185, 129, 0.14);
+  --accent-border: rgba(16, 185, 129, 0.4);
+  --accent-text: #34d399;
+  --accent-ring: rgba(16, 185, 129, 0.25);
+}
+[data-theme="emerald"][data-mode="light"] {
+  --accent: #059669;
+  --accent-subtle: rgba(16, 185, 129, 0.16);
+  --accent-border: rgba(5, 150, 105, 0.4);
+  --accent-text: #047857;
+  --accent-ring: rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="cyan"][data-mode="dark"] {
+  --accent: #06b6d4;
+  --accent-subtle: rgba(6, 182, 212, 0.14);
+  --accent-border: rgba(6, 182, 212, 0.4);
+  --accent-text: #22d3ee;
+  --accent-ring: rgba(6, 182, 212, 0.25);
+}
+[data-theme="cyan"][data-mode="light"] {
+  --accent: #0891b2;
+  --accent-subtle: rgba(6, 182, 212, 0.16);
+  --accent-border: rgba(8, 145, 178, 0.4);
+  --accent-text: #0e7490;
+  --accent-ring: rgba(6, 182, 212, 0.3);
+}
+
+[data-theme="blue"][data-mode="dark"] {
+  --accent: #3b82f6;
+  --accent-subtle: rgba(59, 130, 246, 0.14);
+  --accent-border: rgba(59, 130, 246, 0.4);
+  --accent-text: #60a5fa;
+  --accent-ring: rgba(59, 130, 246, 0.25);
+}
+[data-theme="blue"][data-mode="light"] {
+  --accent: #2563eb;
+  --accent-subtle: rgba(59, 130, 246, 0.16);
+  --accent-border: rgba(37, 99, 235, 0.4);
+  --accent-text: #1d4ed8;
+  --accent-ring: rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="violet"][data-mode="dark"] {
+  --accent: #8b5cf6;
+  --accent-subtle: rgba(139, 92, 246, 0.14);
+  --accent-border: rgba(139, 92, 246, 0.4);
+  --accent-text: #a78bfa;
+  --accent-ring: rgba(139, 92, 246, 0.25);
+}
+[data-theme="violet"][data-mode="light"] {
+  --accent: #7c3aed;
+  --accent-subtle: rgba(139, 92, 246, 0.16);
+  --accent-border: rgba(124, 58, 237, 0.4);
+  --accent-text: #6d28d9;
+  --accent-ring: rgba(139, 92, 246, 0.3);
+}
+
+[data-theme="rose"][data-mode="dark"] {
+  --accent: #f43f5e;
+  --accent-subtle: rgba(244, 63, 94, 0.14);
+  --accent-border: rgba(244, 63, 94, 0.4);
+  --accent-text: #fb7185;
+  --accent-ring: rgba(244, 63, 94, 0.25);
+}
+[data-theme="rose"][data-mode="light"] {
+  --accent: #e11d48;
+  --accent-subtle: rgba(244, 63, 94, 0.16);
+  --accent-border: rgba(225, 29, 72, 0.4);
+  --accent-text: #be123c;
+  --accent-ring: rgba(244, 63, 94, 0.3);
+}
+
+/* Clases de utilidad para el tema */
+.theme-bg-app {
+  background-color: var(--bg-app);
+}
+
+.theme-bg-header {
+  background-color: var(--bg-header);
+}
+
+.theme-bg-panel {
+  background-color: var(--bg-panel);
+}
+
+.theme-bg-card {
+  background-color: var(--bg-card);
+}
+
+.theme-bg-input {
+  background-color: var(--bg-input);
+}
+
+.theme-border-app {
+  border-color: var(--border-app);
+}
+
+.theme-text-app {
+  color: var(--text-app);
+}
+
+.theme-text-muted {
+  color: var(--text-muted);
+}
+
+.theme-accent-bg {
+  background-color: var(--accent);
+}
+
+.theme-accent-text {
+  color: var(--accent-text);
+}
+
+.theme-accent-subtle {
+  background-color: var(--accent-subtle);
+}
+
+.theme-accent-border {
+  border-color: var(--accent-border);
+}
+
+/* Permitir arrastrar la ventana desde el header */
+.titlebar-drag {
+  -webkit-app-region: drag;
+}
+
+/* Evitar arrastre en botones o controles interactivos */
+.titlebar-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Scrollbar estilizada y discreta */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Cursor tipo manito para todos los botones e interactivos */
+button,
+[role="button"],
+.cursor-pointer,
+input[type="button"],
+input[type="submit"] {
+  cursor: pointer !important;
+}
+
+/* Estilos para el Editor Enriquecido de Notas */
+.note-editor-content {
+  outline: none;
+}
+
+.note-editor-content h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 0.875rem;
+  margin-bottom: 0.5rem;
+  color: var(--accent-text);
+  line-height: 1.25;
+}
+
+.note-editor-content h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.375rem;
+  color: var(--text-app);
+  line-height: 1.3;
+}
+
+.note-editor-content h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+  color: var(--text-app);
+}
+
+.note-editor-content p {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+.note-editor-content u {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: var(--accent);
+}
+
+.note-editor-content s,
+.note-editor-content strike {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.note-editor-content ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.note-editor-content ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.note-editor-content li {
+  margin-bottom: 0.25rem;
+}
+
+.note-editor-content blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 0.75rem;
+  margin: 0.75rem 0;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.note-editor-content pre {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-app);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  font-family: monospace;
+  font-size: 0.8125rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.note-editor-content code {
+  font-family: monospace;
+  font-size: 0.8125rem;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-app);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  color: var(--accent-text);
+}
+
+.note-editor-content mark {
+  background-color: var(--accent-subtle);
+  color: var(--accent-text);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--accent-border);
+}
+
+/* Placeholder para el editor cuando está vacío */
+.note-editor-content:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  opacity: 0.5;
+  pointer-events: none;
+}

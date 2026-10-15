@@ -1,0 +1,64 @@
+{
+  "name": "clipdev",
+  "version": "1.0.0",
+  "description": "ClipDev - Gestor inteligente de portapapeles y notas",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "dist": "pnpm run build && electron-builder --win",
+    "dist:dir": "pnpm run build && electron-builder --win --dir",
+    "dist:portable": "pnpm run build && electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.clipdev.app",
+    "productName": "ClipDev",
+    "compression": "maximum",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "win": {
+      "icon": "public/clipDev_logo.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ClipDev"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^44.7.1",
+    "electron-builder": "^26.15.3",
+    "framer-motion": "^14.2.0",
+    "lucide-react": "^1.56.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vite-plugin-electron": "^1.1.2",
+    "vite-plugin-electron-renderer": "^1.0.0"
+  },
+  "dependencies": {}
+}
