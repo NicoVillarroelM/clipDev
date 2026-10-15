@@ -18,6 +18,7 @@ function App() {
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [modalClip, setModalClip] = useState<ClipItem | null>(null);
   const [clipToDelete, setClipToDelete] = useState<ClipItem | null>(null);
+  const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showScaleToast, setShowScaleToast] = useState(false);
   const isInitialMount = useRef(true);
@@ -243,8 +244,9 @@ function App() {
     }
   };
 
-  const handleClearUnpinned = () => {
+  const handleConfirmClearUnpinned = () => {
     setClips((prev) => prev.filter((c) => c.pinned));
+    setIsConfirmClearOpen(false);
   };
 
   const handleSaveNote = (updatedNote: NoteItem) => {
@@ -294,6 +296,8 @@ function App() {
     });
   }, [clips, activeFilter, searchQuery]);
 
+  const unpinnedCount = useMemo(() => clips.filter((c) => !c.pinned).length, [clips]);
+
   return (
     <div
       data-theme={currentTheme}
@@ -326,103 +330,103 @@ function App() {
         {activeTab === "clipboard" ? (
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="p-3 border-b theme-border-app theme-bg-panel flex flex-col gap-2.5 transition-colors">
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={t.search.placeholder}
-                    className="w-full theme-bg-app border theme-border-app focus:theme-accent-border pl-9 pr-8 py-1.5 rounded-lg text-xs theme-text-app placeholder:theme-text-muted focus:outline-none transition-colors shadow-inner"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery("")}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 theme-text-muted hover:theme-text-app"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                {clips.length > 0 && (
-                  <motion.button
-                    whileTap={{ scale: 0.92 }}
-                    onClick={handleClearUnpinned}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium theme-bg-app hover:bg-red-500/10 theme-text-muted hover:text-red-500 border theme-border-app hover:border-red-500/30 transition-colors shadow-sm"
-                    title={t.search.clearTooltip}
+              <div className="relative w-full">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t.search.placeholder}
+                  className="w-full theme-bg-app border theme-border-app focus:theme-accent-border pl-9 pr-8 py-1.5 rounded-lg text-xs theme-text-app placeholder:theme-text-muted focus:outline-none transition-colors shadow-inner"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 theme-text-muted hover:theme-text-app"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">{t.search.clear}</span>
-                  </motion.button>
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 )}
               </div>
 
-              <div className="flex items-center gap-1.5 overflow-x-auto text-xs pb-0.5">
-                <button
-                  onClick={() => setActiveFilter("all")}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shadow-sm ${
-                    activeFilter === "all"
-                      ? "theme-accent-subtle theme-accent-text theme-accent-border border font-medium"
-                      : "theme-bg-app theme-text-muted hover:theme-text-app border theme-border-app"
-                  }`}
-                >
-                  <Layers className="w-3 h-3 theme-accent-text" />
-                  <span>{t.filters.all}</span>
-                  <span className="text-[10px] opacity-60">({clips.length})</span>
-                </button>
+              <div className="flex items-center justify-between gap-2 text-xs pb-0.5">
+                <div className="flex items-center gap-1.5 overflow-x-auto">
+                  <button
+                    onClick={() => setActiveFilter("all")}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shadow-sm ${
+                      activeFilter === "all"
+                        ? "theme-accent-subtle theme-accent-text theme-accent-border border font-medium"
+                        : "theme-bg-app theme-text-muted hover:theme-text-app border theme-border-app"
+                    }`}
+                  >
+                    <Layers className="w-3 h-3 theme-accent-text" />
+                    <span>{t.filters.all}</span>
+                    <span className="text-[10px] opacity-60">({clips.length})</span>
+                  </button>
 
-                <button
-                  onClick={() => setActiveFilter("pinned")}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shadow-sm ${
-                    activeFilter === "pinned"
-                      ? "theme-accent-subtle theme-accent-text theme-accent-border border font-medium"
-                      : "theme-bg-app theme-text-muted hover:theme-text-app border theme-border-app"
-                  }`}
-                >
-                  <Pin className="w-3 h-3 theme-accent-text" />
-                  <span>{t.filters.pinned}</span>
-                  <span className="text-[10px] opacity-60">
-                    ({clips.filter((c) => c.pinned).length})
-                  </span>
-                </button>
+                  <button
+                    onClick={() => setActiveFilter("pinned")}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shadow-sm ${
+                      activeFilter === "pinned"
+                        ? "theme-accent-subtle theme-accent-text theme-accent-border border font-medium"
+                        : "theme-bg-app theme-text-muted hover:theme-text-app border theme-border-app"
+                    }`}
+                  >
+                    <Pin className="w-3 h-3 theme-accent-text" />
+                    <span>{t.filters.pinned}</span>
+                    <span className="text-[10px] opacity-60">
+                      ({clips.filter((c) => c.pinned).length})
+                    </span>
+                  </button>
 
-                <button
-                  onClick={() => setActiveFilter("code")}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shadow-sm ${
-                    activeFilter === "code"
-                      ? "theme-accent-subtle theme-accent-text theme-accent-border border font-medium"
-                      : "theme-bg-app theme-text-muted hover:theme-text-app border theme-border-app"
-                  }`}
-                >
-                  <Code2 className="w-3 h-3 text-emerald-500" />
-                  <span>{t.filters.code}</span>
-                </button>
+                  <button
+                    onClick={() => setActiveFilter("code")}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shadow-sm ${
+                      activeFilter === "code"
+                        ? "theme-accent-subtle theme-accent-text theme-accent-border border font-medium"
+                        : "theme-bg-app theme-text-muted hover:theme-text-app border theme-border-app"
+                    }`}
+                  >
+                    <Code2 className="w-3 h-3 text-emerald-500" />
+                    <span>{t.filters.code}</span>
+                  </button>
 
-                <button
-                  onClick={() => setActiveFilter("url")}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shadow-sm ${
-                    activeFilter === "url"
-                      ? "theme-accent-subtle theme-accent-text theme-accent-border border font-medium"
-                      : "theme-bg-app theme-text-muted hover:theme-text-app border theme-border-app"
-                  }`}
-                >
-                  <Link className="w-3 h-3 text-blue-500" />
-                  <span>{t.filters.url}</span>
-                </button>
+                  <button
+                    onClick={() => setActiveFilter("url")}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shadow-sm ${
+                      activeFilter === "url"
+                        ? "theme-accent-subtle theme-accent-text theme-accent-border border font-medium"
+                        : "theme-bg-app theme-text-muted hover:theme-text-app border theme-border-app"
+                    }`}
+                  >
+                    <Link className="w-3 h-3 text-blue-500" />
+                    <span>{t.filters.url}</span>
+                  </button>
 
-                <button
-                  onClick={() => setActiveFilter("color")}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shadow-sm ${
-                    activeFilter === "color"
-                      ? "theme-accent-subtle theme-accent-text theme-accent-border border font-medium"
-                      : "theme-bg-app theme-text-muted hover:theme-text-app border theme-border-app"
-                  }`}
-                >
-                  <Palette className="w-3 h-3 text-purple-500" />
-                  <span>{t.filters.color}</span>
-                </button>
+                  <button
+                    onClick={() => setActiveFilter("color")}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shadow-sm ${
+                      activeFilter === "color"
+                        ? "theme-accent-subtle theme-accent-text theme-accent-border border font-medium"
+                        : "theme-bg-app theme-text-muted hover:theme-text-app border theme-border-app"
+                    }`}
+                  >
+                    <Palette className="w-3 h-3 text-purple-500" />
+                    <span>{t.filters.color}</span>
+                  </button>
+                </div>
+
+                {unpinnedCount > 0 && (
+                  <motion.button
+                    whileTap={{ scale: 0.94 }}
+                    onClick={() => setIsConfirmClearOpen(true)}
+                    className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-zinc-400 hover:text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors shadow-sm"
+                    title={t.search.clearTooltip}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-500/70" />
+                    <span>{t.search.clearHistory}</span>
+                  </motion.button>
+                )}
               </div>
             </div>
 
@@ -502,8 +506,19 @@ function App() {
 
       <ConfirmDeleteModal
         clip={clipToDelete}
-        onClose={() => setClipToDelete(null)}
-        onConfirm={handleConfirmDelete}
+        isOpenClearAll={isConfirmClearOpen}
+        unpinnedCount={unpinnedCount}
+        onClose={() => {
+          setClipToDelete(null);
+          setIsConfirmClearOpen(false);
+        }}
+        onConfirm={() => {
+          if (isConfirmClearOpen) {
+            handleConfirmClearUnpinned();
+          } else {
+            handleConfirmDelete();
+          }
+        }}
         lang={lang}
       />
     </div>

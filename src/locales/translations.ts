@@ -23,8 +23,8 @@ export const translations = {
     },
     search: {
       placeholder: "Buscar en tu historial (código, enlaces, colores)...",
-      clear: "Limpiar",
-      clearTooltip: "Borra todos los elementos que no estén fijados",
+      clearHistory: "Vaciar no fijados",
+      clearTooltip: "Elimina del historial todos los elementos que no estén fijados",
     },
     filters: {
       all: "Todos",
@@ -58,6 +58,14 @@ export const translations = {
       message: "¿Estás seguro de que deseas eliminar este elemento copiado? Esta acción no se puede deshacer.",
       confirm: "Eliminar",
       cancel: "Cancelar",
+    },
+    confirmClear: {
+      title: "¿Vaciar historial de portapapeles?",
+      message: "¿Estás seguro de que deseas eliminar los fragmentos no fijados? Los elementos que marcaste como fijados se mantendrán guardados.",
+      confirm: "Vaciar historial",
+      cancel: "Cancelar",
+      warning: "elementos no fijados a eliminar",
+      pinnedSafe: "Fijados protegidos",
     },
     notes: {
       myNotes: "Mis Notas",
@@ -118,8 +126,8 @@ export const translations = {
     },
     search: {
       placeholder: "Search history (code, links, colors)...",
-      clear: "Clear",
-      clearTooltip: "Delete all unpinned items",
+      clearHistory: "Clear unpinned",
+      clearTooltip: "Delete all unpinned items from history",
     },
     filters: {
       all: "All",
@@ -153,6 +161,14 @@ export const translations = {
       message: "Are you sure you want to delete this copied item? This action cannot be undone.",
       confirm: "Delete",
       cancel: "Cancel",
+    },
+    confirmClear: {
+      title: "Clear clipboard history?",
+      message: "Are you sure you want to delete all unpinned items? Your pinned items will be kept safe.",
+      confirm: "Clear history",
+      cancel: "Cancel",
+      warning: "unpinned items to delete",
+      pinnedSafe: "Pinned safe",
     },
     notes: {
       myNotes: "My Notes",
