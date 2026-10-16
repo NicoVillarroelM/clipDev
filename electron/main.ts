@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, globalShortcut, ipcMain, shell, session, nativeImage } from "electron";
+import { app, BrowserWindow, clipboard, ClipboardItem, globalShortcut, ipcMain, shell, session, nativeImage } from "electron";
 import { autoUpdater } from "electron-updater";
 import path from "node:path";
 import fs from "node:fs";
@@ -95,37 +95,47 @@ async function createWindow() {
   }
 }
 
-function readClipboardImage(): {
+async function readClipboardImage(): Promise<{
   content: string;
   width: number;
   height: number;
   sizeLabel: string;
-} | null {
+} | null> {
   try {
-    const img = clipboard.readImage();
-    if (img.isEmpty()) return null;
+    const hasImage = (await clipboard.has("image/png")) || (await clipboard.has("image/jpeg"));
+    if (!hasImage) return null;
 
-    const size = img.getSize();
-    if (size.width === 0 || size.height === 0) return null;
+    const items = await clipboard.read();
+    for (const item of items) {
+      const imgType = item.types.find((t) => t.startsWith("image/"));
+      if (imgType) {
+        const blob = await item.getType(imgType);
+        const buffer = Buffer.from(await blob.arrayBuffer());
+        const img = nativeImage.createFromBuffer(buffer);
+        const size = img.getSize();
+        if (size.width === 0 || size.height === 0) return null;
 
-    const MAX_DIMENSION = 1280;
-    let finalImg = img;
-    if (size.width > MAX_DIMENSION || size.height > MAX_DIMENSION) {
-      const scale = Math.min(MAX_DIMENSION / size.width, MAX_DIMENSION / size.height);
-      finalImg = img.resize({
-        width: Math.round(size.width * scale),
-        height: Math.round(size.height * scale),
-        quality: "better",
-      });
+        const MAX_DIMENSION = 1280;
+        let finalImg = img;
+        if (size.width > MAX_DIMENSION || size.height > MAX_DIMENSION) {
+          const scale = Math.min(MAX_DIMENSION / size.width, MAX_DIMENSION / size.height);
+          finalImg = img.resize({
+            width: Math.round(size.width * scale),
+            height: Math.round(size.height * scale),
+            quality: "better",
+          });
+        }
+
+        const finalSize = finalImg.getSize();
+        return {
+          content: finalImg.toDataURL(),
+          width: finalSize.width,
+          height: finalSize.height,
+          sizeLabel: `${size.width} × ${size.height} px`,
+        };
+      }
     }
-
-    const finalSize = finalImg.getSize();
-    return {
-      content: finalImg.toDataURL(),
-      width: finalSize.width,
-      height: finalSize.height,
-      sizeLabel: `${size.width} × ${size.height} px`,
-    };
+    return null;
   } catch {
     return null;
   }
@@ -133,7 +143,7 @@ function readClipboardImage(): {
 
 async function checkClipboard() {
   try {
-    const rawText = clipboard.readText();
+    const rawText = await clipboard.readText();
     const currentText = typeof rawText === "string" ? rawText : "";
     if (currentText.trim() !== "" && currentText !== lastClipboardText) {
       lastClipboardText = currentText;
@@ -148,32 +158,52 @@ async function checkClipboard() {
       return;
     }
 
-    const formats = clipboard.availableFormats();
-    const hasImageFormat = formats.some((f) =>
-      f.includes("image") || f.includes("PNG") || f.includes("DIB") || f.includes("Bitmap")
-    );
-    if (!hasImageFormat) {
+    const hasImage = (await clipboard.has("image/png")) || (await clipboard.has("image/jpeg"));
+    if (!hasImage) {
       return;
     }
 
-    const img = clipboard.readImage();
-    if (img.isEmpty()) {
-      return;
-    }
+    const items = await clipboard.read();
+    for (const item of items) {
+      const imgType = item.types.find((t) => t.startsWith("image/"));
+      if (imgType) {
+        const blob = await item.getType(imgType);
+        const buffer = Buffer.from(await blob.arrayBuffer());
+        const hash = crypto.createHash("md5").update(buffer).digest("hex");
 
-    const bitmap = img.getBitmap();
-    const hash = crypto.createHash("md5").update(bitmap).digest("hex");
+        if (hash === lastImageHash) {
+          return;
+        }
 
-    if (hash === lastImageHash) {
-      return;
-    }
+        lastImageHash = hash;
+        lastClipboardText = "";
 
-    lastImageHash = hash;
-    lastClipboardText = "";
+        const img = nativeImage.createFromBuffer(buffer);
+        const size = img.getSize();
+        if (size.width === 0 || size.height === 0) return;
 
-    const imgData = readClipboardImage();
-    if (imgData && win && !win.isDestroyed()) {
-      win.webContents.send("clipboard:updated-image", imgData);
+        const MAX_DIMENSION = 1280;
+        let finalImg = img;
+        if (size.width > MAX_DIMENSION || size.height > MAX_DIMENSION) {
+          const scale = Math.min(MAX_DIMENSION / size.width, MAX_DIMENSION / size.height);
+          finalImg = img.resize({
+            width: Math.round(size.width * scale),
+            height: Math.round(size.height * scale),
+            quality: "better",
+          });
+        }
+
+        const finalSize = finalImg.getSize();
+        if (win && !win.isDestroyed()) {
+          win.webContents.send("clipboard:updated-image", {
+            content: finalImg.toDataURL(),
+            width: finalSize.width,
+            height: finalSize.height,
+            sizeLabel: `${size.width} × ${size.height} px`,
+          });
+        }
+        return;
+      }
     }
   } catch (err) {
     console.error("Error reading clipboard:", err);
@@ -182,12 +212,21 @@ async function checkClipboard() {
 
 async function startClipboardWatcher() {
   try {
-    const rawInit = clipboard.readText();
+    const rawInit = await clipboard.readText();
     lastClipboardText = typeof rawInit === "string" ? rawInit : "";
     if (!lastClipboardText) {
-      const initImg = clipboard.readImage();
-      if (!initImg.isEmpty()) {
-        lastImageHash = crypto.createHash("md5").update(initImg.getBitmap()).digest("hex");
+      const hasImage = (await clipboard.has("image/png")) || (await clipboard.has("image/jpeg"));
+      if (hasImage) {
+        const items = await clipboard.read();
+        for (const item of items) {
+          const imgType = item.types.find((t) => t.startsWith("image/"));
+          if (imgType) {
+            const blob = await item.getType(imgType);
+            const buffer = Buffer.from(await blob.arrayBuffer());
+            lastImageHash = crypto.createHash("md5").update(buffer).digest("hex");
+            break;
+          }
+        }
       }
     }
   } catch {
@@ -271,18 +310,19 @@ ipcMain.on("clipboard:write", (_event, text: string) => {
   void clipboard.writeText(text);
 });
 
-ipcMain.handle("clipboard:get-current-image", () => {
-  return readClipboardImage();
+ipcMain.handle("clipboard:get-current-image", async () => {
+  return await readClipboardImage();
 });
 
-ipcMain.on("clipboard:write-image", (_event, dataUrl: string) => {
+ipcMain.on("clipboard:write-image", async (_event, dataUrl: string) => {
   try {
     const img = nativeImage.createFromDataURL(dataUrl);
-    if (!img.isEmpty()) {
-      lastImageHash = crypto.createHash("md5").update(img.getBitmap()).digest("hex");
-      lastClipboardText = "";
-      clipboard.writeImage(img);
-    }
+    const buffer = img.toPNG();
+    lastImageHash = crypto.createHash("md5").update(buffer).digest("hex");
+    lastClipboardText = "";
+    const blob = new Blob([buffer], { type: "image/png" });
+    const item = new ClipboardItem({ "image/png": blob });
+    await clipboard.write([item]);
   } catch (err) {
     console.error("Error writing image to clipboard:", err);
   }

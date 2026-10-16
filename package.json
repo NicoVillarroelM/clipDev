@@ -1,6 +1,6 @@
 {
   "name": "clipdev",
-  "version": "1.0.4",
+  "version": "1.0.3",
   "description": "ClipDev - Gestor inteligente de portapapeles y notas",
   "main": "dist-electron/main.js",
   "scripts": {
