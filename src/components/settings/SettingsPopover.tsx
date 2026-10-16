@@ -9,8 +9,9 @@ import {
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { THEME_OPTIONS, type ThemeId, type ThemeMode, type FontSize, type AppFinish } from "../types/theme";
-import { translations, type Language } from "../locales/translations";
+import { THEME_OPTIONS, type ThemeId, type ThemeMode, type FontSize, type AppFinish } from "../../types/theme";
+import { translations, type Language } from "../../locales/translations";
+import { APP_NAME, APP_VERSION, FONT_SIZE_OPTIONS, LANGUAGE_OPTIONS } from "../../constants";
 
 interface SettingsPopoverProps {
   currentTheme: ThemeId;
@@ -239,9 +240,8 @@ export const SettingsPopover = ({
                   {t.controls.fontSize}
                 </label>
                 <div className="grid grid-cols-3 gap-1 p-1 rounded-xl theme-bg-app border theme-border-app text-xs font-mono">
-                  {(["normal", "large", "xlarge"] as FontSize[]).map((size) => {
+                  {FONT_SIZE_OPTIONS.map(({ id: size, label }) => {
                     const isActive = fontSize === size;
-                    const label = size === "normal" ? "100%" : size === "large" ? "112%" : "125%";
                     return (
                       <button
                         key={size}
@@ -264,35 +264,29 @@ export const SettingsPopover = ({
                   {t.controls.language}
                 </label>
                 <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl theme-bg-app border theme-border-app">
-                  <button
-                    onClick={() => onSelectLang("es")}
-                    className={`flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg text-xs font-semibold transition-all ${
-                      lang === "es"
-                        ? "theme-accent-subtle theme-accent-text theme-accent-border border shadow-sm"
-                        : "theme-text-muted hover:theme-text-app"
-                    }`}
-                  >
-                    <span>🇪🇸</span>
-                    <span>Español</span>
-                  </button>
-
-                  <button
-                    onClick={() => onSelectLang("en")}
-                    className={`flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg text-xs font-semibold transition-all ${
-                      lang === "en"
-                        ? "theme-accent-subtle theme-accent-text theme-accent-border border shadow-sm"
-                        : "theme-text-muted hover:theme-text-app"
-                    }`}
-                  >
-                    <span>🇺🇸</span>
-                    <span>English</span>
-                  </button>
+                  {LANGUAGE_OPTIONS.map((opt) => {
+                    const isActive = lang === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => onSelectLang(opt.id)}
+                        className={`flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg text-xs font-semibold transition-all ${
+                          isActive
+                            ? "theme-accent-subtle theme-accent-text theme-accent-border border shadow-sm"
+                            : "theme-text-muted hover:theme-text-app"
+                        }`}
+                      >
+                        <span>{opt.flag}</span>
+                        <span>{opt.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
             <div className="pt-2.5 mt-2.5 border-t theme-border-app flex items-center justify-between text-[10px] theme-text-muted font-mono">
-              <span>ClipDev v1.0.2</span>
+              <span>{APP_NAME} v{APP_VERSION}</span>
               <span className="theme-accent-text font-semibold">{t.app.shortcutHint}</span>
             </div>
           </motion.div>

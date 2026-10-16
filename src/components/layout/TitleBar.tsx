@@ -1,10 +1,11 @@
 import { Minus, X, Clipboard, StickyNote } from "lucide-react";
 import { motion } from "framer-motion";
-import { SettingsPopover } from "./SettingsPopover";
-import type { ActiveTab } from "../types/clip";
-import type { ThemeId, ThemeMode, FontSize, AppFinish } from "../types/theme";
-import { translations, type Language } from "../locales/translations";
-import clipLogo from "../assets/clipDev_logo.png";
+import { SettingsPopover } from "../settings/SettingsPopover";
+import type { ActiveTab } from "../../types/clip";
+import type { ThemeId, ThemeMode, FontSize, AppFinish } from "../../types/theme";
+import { translations, type Language } from "../../locales/translations";
+import clipLogo from "../../assets/clipDev_logo.png";
+import { APP_VERSION } from "../../constants";
 
 interface TitleBarProps {
   activeTab: ActiveTab;
@@ -40,6 +41,7 @@ export const TitleBar = ({
   onToggleFinish,
 }: TitleBarProps) => {
   const t = translations[lang];
+  const isMac = window.electronAPI?.platform === "darwin" || (typeof navigator !== "undefined" && navigator.userAgent.includes("Mac"));
 
   const handleMinimize = () => {
     window.electronAPI?.minimizeWindow();
@@ -50,7 +52,7 @@ export const TitleBar = ({
   };
 
   return (
-    <header className="titlebar-drag relative z-50 h-12 theme-bg-header border-b theme-border-app flex items-center justify-between px-3 select-none transition-colors duration-200">
+    <header className={`titlebar-drag relative z-50 h-12 theme-bg-header border-b theme-border-app flex items-center justify-between select-none transition-colors duration-200 ${isMac ? "pl-20 pr-3" : "px-3"}`}>
       <div className="flex items-center gap-3 sm:gap-4">
         <div className="flex items-center gap-2.5 group cursor-default">
           <div className="w-7 h-7 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
@@ -67,7 +69,7 @@ export const TitleBar = ({
               <span className="theme-accent-text font-black ml-0.5">Dev</span>
             </span>
             <span className="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded-full theme-accent-subtle theme-accent-text border theme-accent-border/40 tracking-wider">
-              v1.0.2
+              v{APP_VERSION}
             </span>
           </div>
         </div>
@@ -133,24 +135,26 @@ export const TitleBar = ({
           onSelectLang={onSelectLang}
         />
 
-        <div className="titlebar-no-drag flex items-center gap-0.5 ml-1">
-          <button
-            onClick={handleMinimize}
-            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-zinc-500/10 theme-text-muted hover:theme-text-app transition-colors"
-            title={t.controls.minimize}
-            aria-label={t.controls.minimize}
-          >
-            <Minus className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={handleClose}
-            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-500/20 hover:text-red-500 theme-text-muted transition-colors"
-            title={t.controls.close}
-            aria-label={t.controls.close}
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        {!isMac && (
+          <div className="titlebar-no-drag flex items-center gap-0.5 ml-1">
+            <button
+              onClick={handleMinimize}
+              className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-zinc-500/10 theme-text-muted hover:theme-text-app transition-colors"
+              title={t.controls.minimize}
+              aria-label={t.controls.minimize}
+            >
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={handleClose}
+              className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-500/20 hover:text-red-500 theme-text-muted transition-colors"
+              title={t.controls.close}
+              aria-label={t.controls.close}
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

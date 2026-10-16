@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Palette, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { THEME_OPTIONS, type ThemeId } from "../types/theme";
-import { translations, type Language } from "../locales/translations";
+import { THEME_OPTIONS, type ThemeId } from "../../types/theme";
+import { translations, type Language } from "../../locales/translations";
 
 interface ThemeSelectorProps {
   currentTheme: ThemeId;

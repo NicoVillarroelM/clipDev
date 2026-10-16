@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { Trash2, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { ClipItem } from "../types/clip";
-import { translations, type Language } from "../locales/translations";
+import type { ClipItem } from "../../types/clip";
+import { translations, type Language } from "../../locales/translations";
 
 interface ConfirmDeleteModalProps {
   clip: ClipItem | null;
