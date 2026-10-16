@@ -7,8 +7,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "dist": "pnpm run build && electron-builder --win",
-    "dist:dir": "pnpm run build && electron-builder --win --dir",
+    "dist": "pnpm run build && electron-builder",
+    "dist:win": "pnpm run build && electron-builder --win",
+    "dist:mac": "pnpm run build && electron-builder --mac",
+    "dist:dir": "pnpm run build && electron-builder --dir",
     "dist:portable": "pnpm run build && electron-builder --win portable"
   },
   "build": {
@@ -23,6 +25,42 @@
       "dist/**/*",
       "dist-electron/**/*"
     ],
+    "mac": {
+      "icon": "public/clipDev_logo.png",
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
     "win": {
       "icon": "public/clipDev_logo.ico",
       "target": [
