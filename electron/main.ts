@@ -125,7 +125,7 @@ function processImageBuffer(buffer: Buffer): {
   }
 
   const finalSize = finalImg.getSize();
-  const isTransparent = hasTransparency(finalImg.getBitmap());
+  const isTransparent = hasTransparency(finalImg.toBitmap());
   const content = isTransparent
     ? finalImg.toDataURL()
     : `data:image/jpeg;base64,${finalImg.toJPEG(85).toString("base64")}`;
