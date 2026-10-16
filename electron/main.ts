@@ -4,6 +4,7 @@ import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { ClipDevDatabase } from "./database";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -95,6 +96,48 @@ async function createWindow() {
   }
 }
 
+function hasTransparency(bitmap: Buffer): boolean {
+  for (let i = 3; i < bitmap.length; i += 4) {
+    if (bitmap[i] < 250) return true;
+  }
+  return false;
+}
+
+function processImageBuffer(buffer: Buffer): {
+  content: string;
+  width: number;
+  height: number;
+  sizeLabel: string;
+} | null {
+  const img = nativeImage.createFromBuffer(buffer);
+  const size = img.getSize();
+  if (size.width === 0 || size.height === 0) return null;
+
+  const MAX_DIMENSION = 1280;
+  let finalImg = img;
+  if (size.width > MAX_DIMENSION || size.height > MAX_DIMENSION) {
+    const scale = Math.min(MAX_DIMENSION / size.width, MAX_DIMENSION / size.height);
+    finalImg = img.resize({
+      width: Math.round(size.width * scale),
+      height: Math.round(size.height * scale),
+      quality: "better",
+    });
+  }
+
+  const finalSize = finalImg.getSize();
+  const isTransparent = hasTransparency(finalImg.getBitmap());
+  const content = isTransparent
+    ? finalImg.toDataURL()
+    : `data:image/jpeg;base64,${finalImg.toJPEG(85).toString("base64")}`;
+
+  return {
+    content,
+    width: finalSize.width,
+    height: finalSize.height,
+    sizeLabel: `${size.width} × ${size.height} px`,
+  };
+}
+
 async function readClipboardImage(): Promise<{
   content: string;
   width: number;
@@ -111,28 +154,7 @@ async function readClipboardImage(): Promise<{
       if (imgType) {
         const blob = await item.getType(imgType);
         const buffer = Buffer.from(await blob.arrayBuffer());
-        const img = nativeImage.createFromBuffer(buffer);
-        const size = img.getSize();
-        if (size.width === 0 || size.height === 0) return null;
-
-        const MAX_DIMENSION = 1280;
-        let finalImg = img;
-        if (size.width > MAX_DIMENSION || size.height > MAX_DIMENSION) {
-          const scale = Math.min(MAX_DIMENSION / size.width, MAX_DIMENSION / size.height);
-          finalImg = img.resize({
-            width: Math.round(size.width * scale),
-            height: Math.round(size.height * scale),
-            quality: "better",
-          });
-        }
-
-        const finalSize = finalImg.getSize();
-        return {
-          content: finalImg.toDataURL(),
-          width: finalSize.width,
-          height: finalSize.height,
-          sizeLabel: `${size.width} × ${size.height} px`,
-        };
+        return processImageBuffer(buffer);
       }
     }
     return null;
@@ -178,29 +200,9 @@ async function checkClipboard() {
         lastImageHash = hash;
         lastClipboardText = "";
 
-        const img = nativeImage.createFromBuffer(buffer);
-        const size = img.getSize();
-        if (size.width === 0 || size.height === 0) return;
-
-        const MAX_DIMENSION = 1280;
-        let finalImg = img;
-        if (size.width > MAX_DIMENSION || size.height > MAX_DIMENSION) {
-          const scale = Math.min(MAX_DIMENSION / size.width, MAX_DIMENSION / size.height);
-          finalImg = img.resize({
-            width: Math.round(size.width * scale),
-            height: Math.round(size.height * scale),
-            quality: "better",
-          });
-        }
-
-        const finalSize = finalImg.getSize();
-        if (win && !win.isDestroyed()) {
-          win.webContents.send("clipboard:updated-image", {
-            content: finalImg.toDataURL(),
-            width: finalSize.width,
-            height: finalSize.height,
-            sizeLabel: `${size.width} × ${size.height} px`,
-          });
+        const imgData = processImageBuffer(buffer);
+        if (imgData && win && !win.isDestroyed()) {
+          win.webContents.send("clipboard:updated-image", imgData);
         }
         return;
       }
@@ -284,9 +286,21 @@ void initializeApp().catch((err) => {
   console.error("Failed to initialize app:", err);
 });
 
+const userDataPath = app.getPath("userData");
+let storageDb: ClipDevDatabase | null = null;
+
+function getDatabase(): ClipDevDatabase {
+  if (!storageDb) {
+    storageDb = new ClipDevDatabase(userDataPath);
+  }
+  return storageDb;
+}
+
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
   if (clipboardInterval) clearInterval(clipboardInterval);
+  storageDb?.close();
+  storageDb = null;
 });
 
 app.on("window-all-closed", () => {
@@ -295,7 +309,6 @@ app.on("window-all-closed", () => {
   }
 });
 
-// IPC Handlers
 ipcMain.handle("clipboard:get-current", async () => {
   try {
     return await clipboard.readText();
@@ -305,7 +318,7 @@ ipcMain.handle("clipboard:get-current", async () => {
 });
 
 ipcMain.on("clipboard:write", (_event, text: string) => {
-  lastClipboardText = text; // Evita loop en el watcher
+  lastClipboardText = text;
   lastImageHash = "";
   void clipboard.writeText(text);
 });
@@ -359,93 +372,35 @@ ipcMain.on("app:restart-and-install", () => {
   autoUpdater.quitAndInstall();
 });
 
-// Persistencia física en archivos JSON en el disco local del usuario (100% privado, offline y permanente)
-const userDataPath = app.getPath("userData");
-const clipsFilePath = path.join(userDataPath, "clips.json");
-const notesFilePath = path.join(userDataPath, "notes.json");
-
-let pendingClipsJson: string | null = null;
-let pendingNotesJson: string | null = null;
-
-let saveClipsPromise: Promise<void> = Promise.resolve();
-let saveNotesPromise: Promise<void> = Promise.resolve();
-
-async function atomicWriteFile(filePath: string, content: string): Promise<void> {
-  const tempPath = `${filePath}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
+ipcMain.handle("storage:load-disk", () => {
   try {
-    await fs.promises.writeFile(tempPath, content, "utf-8");
-    await fs.promises.rename(tempPath, filePath);
+    const db = getDatabase();
+    const { clips, notes } = db.loadAll();
+    return { clips, notes, storagePath: db.dbPath };
   } catch (err) {
-    try {
-      if (fs.existsSync(tempPath)) {
-        await fs.promises.unlink(tempPath);
-      }
-    } catch {}
-    throw err;
-  }
-}
-
-ipcMain.handle("storage:load-disk", async () => {
-  try {
-    await saveClipsPromise;
-    await saveNotesPromise;
-
-    let clips = null;
-    let notes = null;
-
-    if (fs.existsSync(clipsFilePath)) {
-      try {
-        const raw = await fs.promises.readFile(clipsFilePath, "utf-8");
-        if (raw && raw.trim().length > 0) {
-          clips = JSON.parse(raw);
-        }
-      } catch (err) {
-        console.warn("clips.json vacío o corrupto, se usará memoria local:", err);
-      }
-    }
-
-    if (fs.existsSync(notesFilePath)) {
-      try {
-        const raw = await fs.promises.readFile(notesFilePath, "utf-8");
-        if (raw && raw.trim().length > 0) {
-          notes = JSON.parse(raw);
-        }
-      } catch (err) {
-        console.warn("notes.json vacío o corrupto, se usará memoria local:", err);
-      }
-    }
-
-    return { clips, notes, storagePath: userDataPath };
-  } catch (err) {
-    console.error("Error al cargar datos desde el disco:", err);
+    console.error("Error al cargar datos desde SQLite:", err);
     return { clips: null, notes: null, storagePath: userDataPath };
   }
 });
 
 ipcMain.on("storage:save-clips", (_event, clipsJson: string) => {
-  pendingClipsJson = clipsJson;
-  saveClipsPromise = saveClipsPromise
-    .then(async () => {
-      if (pendingClipsJson === null) return;
-      const content = pendingClipsJson;
-      pendingClipsJson = null;
-      await atomicWriteFile(clipsFilePath, content);
-    })
-    .catch((err) => {
-      console.error("Error al guardar clips en disco:", err);
-    });
+  try {
+    const clips = JSON.parse(clipsJson);
+    if (Array.isArray(clips)) {
+      getDatabase().saveClips(clips);
+    }
+  } catch (err) {
+    console.error("Error al guardar clips en SQLite:", err);
+  }
 });
 
 ipcMain.on("storage:save-notes", (_event, notesJson: string) => {
-  pendingNotesJson = notesJson;
-  saveNotesPromise = saveNotesPromise
-    .then(async () => {
-      if (pendingNotesJson === null) return;
-      const content = pendingNotesJson;
-      pendingNotesJson = null;
-      await atomicWriteFile(notesFilePath, content);
-    })
-    .catch((err) => {
-      console.error("Error al guardar notas en disco:", err);
-    });
+  try {
+    const notes = JSON.parse(notesJson);
+    if (Array.isArray(notes)) {
+      getDatabase().saveNotes(notes);
+    }
+  } catch (err) {
+    console.error("Error al guardar notas en SQLite:", err);
+  }
 });

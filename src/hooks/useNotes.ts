@@ -47,8 +47,13 @@ export function useNotes({ initialTitle, initialContent }: UseNotesOptions) {
         .then((data) => {
           if (!isMounted) return;
           if (data.notes && data.notes.length > 0) {
-            setNotes((prev) => (prev.length <= 1 ? data.notes! : prev));
+            setNotes(data.notes);
+          } else if (notesRef.current.length > 0) {
+            window.electronAPI?.saveNotesToDisk?.(JSON.stringify(notesRef.current));
           }
+          try {
+            localStorage.removeItem(STORAGE_KEYS.NOTES);
+          } catch {}
           isHydratedRef.current = true;
         })
         .catch(() => {
@@ -64,10 +69,13 @@ export function useNotes({ initialTitle, initialContent }: UseNotesOptions) {
 
   const saveToStorage = useCallback((notesToSave: NoteItem[]) => {
     const json = JSON.stringify(notesToSave);
-    try {
-      localStorage.setItem(STORAGE_KEYS.NOTES, json);
-    } catch {}
-    window.electronAPI?.saveNotesToDisk?.(json);
+    if (window.electronAPI?.saveNotesToDisk) {
+      window.electronAPI.saveNotesToDisk(json);
+    } else {
+      try {
+        localStorage.setItem(STORAGE_KEYS.NOTES, json);
+      } catch {}
+    }
   }, []);
 
   useEffect(() => {
