@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   Code2,
   Link,
@@ -14,7 +15,7 @@ interface ClipBadgeProps {
   showDetails?: boolean;
 }
 
-export const ClipBadge = ({
+export const ClipBadge = memo(({
   clip,
   lang,
   size = "sm",
@@ -86,4 +87,4 @@ export const ClipBadge = ({
         </span>
       );
   }
-};
+});

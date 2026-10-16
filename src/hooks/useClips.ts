@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import type { ClipItem, FilterType } from "../types/clip";
 import { detectContentType } from "../utils/detector";
-import { STORAGE_KEYS, MAX_CLIPS_COUNT } from "../constants";
+import { STORAGE_KEYS, MAX_CLIPS_COUNT, STORAGE_SAVE_DEBOUNCE_MS } from "../constants";
 
 interface UseClipsOptions {
   imageFilterLabel: string;
@@ -9,6 +9,7 @@ interface UseClipsOptions {
 
 export function useClips({ imageFilterLabel }: UseClipsOptions) {
   const isHydratedRef = useRef(false);
+  const isDirtyRef = useRef(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
 
@@ -20,6 +21,9 @@ export function useClips({ imageFilterLabel }: UseClipsOptions) {
       return [];
     }
   });
+
+  const clipsRef = useRef(clips);
+  clipsRef.current = clips;
 
   useEffect(() => {
     let isMounted = true;
@@ -44,14 +48,46 @@ export function useClips({ imageFilterLabel }: UseClipsOptions) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isHydratedRef.current) return;
-    const json = JSON.stringify(clips);
+  const saveToStorage = useCallback((clipsToSave: ClipItem[]) => {
+    const json = JSON.stringify(clipsToSave);
     try {
       localStorage.setItem(STORAGE_KEYS.CLIPS, json);
     } catch {}
     window.electronAPI?.saveClipsToDisk?.(json);
-  }, [clips]);
+  }, []);
+
+  useEffect(() => {
+    if (!isHydratedRef.current) return;
+    isDirtyRef.current = true;
+
+    const timer = setTimeout(() => {
+      saveToStorage(clipsRef.current);
+      isDirtyRef.current = false;
+    }, STORAGE_SAVE_DEBOUNCE_MS);
+
+    const handleBeforeUnload = () => {
+      if (isDirtyRef.current) {
+        clearTimeout(timer);
+        saveToStorage(clipsRef.current);
+        isDirtyRef.current = false;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [clips, saveToStorage]);
+
+  useEffect(() => {
+    return () => {
+      if (isDirtyRef.current) {
+        saveToStorage(clipsRef.current);
+      }
+    };
+  }, [saveToStorage]);
 
   useEffect(() => {
     if (!window.electronAPI) {
@@ -135,7 +171,7 @@ export function useClips({ imageFilterLabel }: UseClipsOptions) {
     };
   }, []);
 
-  const handleCopy = (content: string) => {
+  const handleCopy = useCallback((content: string) => {
     if (content.startsWith("data:image/") && window.electronAPI?.writeClipboardImage) {
       window.electronAPI.writeClipboardImage(content);
       return;
@@ -145,21 +181,21 @@ export function useClips({ imageFilterLabel }: UseClipsOptions) {
     } else {
       navigator.clipboard.writeText(content);
     }
-  };
+  }, []);
 
-  const handleTogglePin = (id: string) => {
+  const handleTogglePin = useCallback((id: string) => {
     setClips((prev) =>
       prev.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c))
     );
-  };
+  }, []);
 
-  const handleDeleteClip = (id: string) => {
+  const handleDeleteClip = useCallback((id: string) => {
     setClips((prev) => prev.filter((c) => c.id !== id));
-  };
+  }, []);
 
-  const handleConfirmClearUnpinned = () => {
+  const handleConfirmClearUnpinned = useCallback(() => {
     setClips((prev) => prev.filter((c) => c.pinned));
-  };
+  }, []);
 
   const filteredClips = useMemo(() => {
     return clips.filter((clip) => {

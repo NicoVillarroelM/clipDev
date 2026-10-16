@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Search, X, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { FilterType } from "../../types/clip";
@@ -16,7 +17,7 @@ interface FilterBarProps {
   lang: Language;
 }
 
-export const FilterBar = ({
+export const FilterBar = memo(({
   searchQuery,
   onSearchChange,
   activeFilter,
@@ -98,4 +99,4 @@ export const FilterBar = ({
       </div>
     </div>
   );
-};
+});

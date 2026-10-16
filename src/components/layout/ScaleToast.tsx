@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Type } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { FontSize } from "../../types/theme";
@@ -9,7 +10,7 @@ interface ScaleToastProps {
   lang: Language;
 }
 
-export const ScaleToast = ({ show, fontSize, lang }: ScaleToastProps) => {
+export const ScaleToast = memo(({ show, fontSize, lang }: ScaleToastProps) => {
   const t = translations[lang];
 
   return (
@@ -35,4 +36,4 @@ export const ScaleToast = ({ show, fontSize, lang }: ScaleToastProps) => {
       )}
     </AnimatePresence>
   );
-};
+});

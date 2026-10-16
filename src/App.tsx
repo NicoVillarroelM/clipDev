@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -78,6 +78,10 @@ function App() {
     setIsConfirmClearOpen(false);
   };
 
+  const handleOpenConfirmClear = useCallback(() => {
+    setIsConfirmClearOpen(true);
+  }, []);
+
   const pinnedCount = clips.filter((c) => c.pinned).length;
 
   return (
@@ -122,7 +126,7 @@ function App() {
               clipsCount={clips.length}
               pinnedCount={pinnedCount}
               unpinnedCount={unpinnedCount}
-              onClearUnpinned={() => setIsConfirmClearOpen(true)}
+              onClearUnpinned={handleOpenConfirmClear}
               lang={lang}
             />
 
