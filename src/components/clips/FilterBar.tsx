@@ -13,6 +13,7 @@ interface FilterBarProps {
   clipsCount: number;
   pinnedCount: number;
   unpinnedCount: number;
+  totalSizeLabel?: string;
   onClearUnpinned: () => void;
   lang: Language;
 }
@@ -25,6 +26,7 @@ export const FilterBar = memo(({
   clipsCount,
   pinnedCount,
   unpinnedCount,
+  totalSizeLabel,
   onClearUnpinned,
   lang,
 }: FilterBarProps) => {
@@ -84,18 +86,29 @@ export const FilterBar = memo(({
           })}
         </div>
 
-        {unpinnedCount > 0 && (
-          <motion.button
-            whileTap={{ scale: 0.94 }}
-            onClick={onClearUnpinned}
-            className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium theme-text-muted hover:text-rose-400 hover:bg-rose-500/15 border border-transparent hover:border-rose-500/30 transition-colors shadow-sm"
-            title={t.search.clearTooltip}
-            aria-label={t.search.clearTooltip}
-          >
-            <Trash2 className="w-3.5 h-3.5 text-red-500/70" />
-            <span>{t.search.clearHistory}</span>
-          </motion.button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {totalSizeLabel && (
+            <span
+              className="text-[10px] font-mono px-2 py-0.5 rounded-md theme-bg-app border theme-border-app theme-text-muted select-none"
+              title={lang === "es" ? "Espacio total ocupado en portapapeles" : "Total clipboard storage used"}
+            >
+              💾 {totalSizeLabel}
+            </span>
+          )}
+
+          {unpinnedCount > 0 && (
+            <motion.button
+              whileTap={{ scale: 0.94 }}
+              onClick={onClearUnpinned}
+              className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium theme-text-muted hover:text-rose-400 hover:bg-rose-500/15 border border-transparent hover:border-rose-500/30 transition-colors shadow-sm"
+              title={t.search.clearTooltip}
+              aria-label={t.search.clearTooltip}
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-500/70" />
+              <span>{t.search.clearHistory}</span>
+            </motion.button>
+          )}
+        </div>
       </div>
     </div>
   );

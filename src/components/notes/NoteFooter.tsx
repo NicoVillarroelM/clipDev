@@ -4,12 +4,14 @@ import { translations, type Language } from "../../locales/translations";
 interface NoteFooterProps {
   wordsCount: number;
   charsCount: number;
+  sizeLabel?: string;
   lang: Language;
 }
 
 export const NoteFooter = ({
   wordsCount,
   charsCount,
+  sizeLabel,
   lang,
 }: NoteFooterProps) => {
   const t = translations[lang];
@@ -23,6 +25,12 @@ export const NoteFooter = ({
         </span>
       </div>
       <div className="flex items-center gap-2 font-mono opacity-75">
+        {sizeLabel && (
+          <>
+            <span>{sizeLabel}</span>
+            <span>·</span>
+          </>
+        )}
         <span>
           {wordsCount} {lang === "es" ? "palabras" : "words"}
         </span>

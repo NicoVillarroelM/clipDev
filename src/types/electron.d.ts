@@ -1,6 +1,11 @@
+export interface ClipboardWritePayload {
+  text: string;
+  html?: string;
+}
+
 export interface ElectronAPI {
   platform?: string;
-  writeClipboard: (text: string) => void;
+  writeClipboard: (data: string | ClipboardWritePayload) => void;
   getCurrentClipboard: () => Promise<string>;
   onClipboardUpdate: (callback: (text: string) => void) => () => void;
   minimizeWindow: () => void;

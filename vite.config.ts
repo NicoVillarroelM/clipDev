@@ -28,4 +28,12 @@ export default defineConfig({
       },
     ]),
   ],
+  server: {
+    watch: {
+      ignored: ["**/release/**", "**/*.db", "**/*.db-journal", "**/*.db-wal", "**/*.db-shm"],
+    },
+  },
+  resolve: {
+    dedupe: ["react", "react-dom"],
+  },
 });

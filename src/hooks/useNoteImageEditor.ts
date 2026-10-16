@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, type RefObject, type MouseEvent, type ClipboardEvent } from "react";
 import type { ImageResizePreset, ImageAlignOption } from "../constants";
+import { isMarkdown, parseMarkdownToHtml } from "../utils/markdown";
 
 interface UseNoteImageEditorOptions {
   scrollContainerRef: RefObject<HTMLDivElement | null>;
@@ -173,6 +174,14 @@ export const useNoteImageEditor = ({
 
     const html = e.clipboardData.getData("text/html");
     const text = e.clipboardData.getData("text/plain");
+
+    if (text && isMarkdown(text)) {
+      e.preventDefault();
+      const parsedHtml = parseMarkdownToHtml(text);
+      document.execCommand("insertHTML", false, parsedHtml);
+      onContentChangeRef.current();
+      return;
+    }
 
     if (!html && text) {
       e.preventDefault();

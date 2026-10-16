@@ -13,6 +13,7 @@ import type { ClipItem } from "../../types/clip";
 import { translations, type Language } from "../../locales/translations";
 import { ClipBadge } from "./ClipBadge";
 import { FEEDBACK_TIMEOUT_MS } from "../../constants";
+import { formatBytes, getClipByteSize } from "../../utils/formatSize";
 
 interface ClipCardProps {
   clip: ClipItem;
@@ -65,6 +66,10 @@ export const ClipCard = memo(({
     );
   }, [clip.createdAt, lang]);
 
+  const formattedSize = useMemo(() => {
+    return formatBytes(getClipByteSize(clip));
+  }, [clip.content, clip.type]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -6 }}
@@ -84,6 +89,12 @@ export const ClipCard = memo(({
             title={fullDateTime}
           >
             {formattedDate}
+          </span>
+          <span
+            className="text-[10px] px-1.5 py-0.5 rounded font-mono font-medium theme-bg-panel border theme-border-app theme-text-muted select-none"
+            title={lang === "es" ? "Tamaño en memoria / disco" : "Memory / disk size"}
+          >
+            {formattedSize}
           </span>
         </div>
 

@@ -317,10 +317,26 @@ ipcMain.handle("clipboard:get-current", async () => {
   }
 });
 
-ipcMain.on("clipboard:write", (_event, text: string) => {
+ipcMain.on("clipboard:write", async (_event, payload: string | { text: string; html?: string }) => {
+  const text = typeof payload === "string" ? payload : payload.text;
+  const html = typeof payload === "object" && payload.html ? payload.html : undefined;
+
   lastClipboardText = text;
   lastImageHash = "";
-  void clipboard.writeText(text);
+
+  if (html) {
+    try {
+      const item = new ClipboardItem({
+        "text/plain": new Blob([text], { type: "text/plain" }),
+        "text/html": new Blob([html], { type: "text/html" }),
+      });
+      await clipboard.write([item]);
+    } catch {
+      await clipboard.writeText(text);
+    }
+  } else {
+    await clipboard.writeText(text);
+  }
 });
 
 ipcMain.handle("clipboard:get-current-image", async () => {
