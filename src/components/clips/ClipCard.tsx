@@ -1,8 +1,5 @@
 import { useState } from "react";
 import {
-  Code2,
-  Link,
-  FileText,
   Pin,
   Trash2,
   Copy,
@@ -10,11 +7,12 @@ import {
   ChevronDown,
   ChevronUp,
   Maximize2,
-  Image as ImageIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { ClipItem } from "../types/clip";
-import { translations, type Language } from "../locales/translations";
+import type { ClipItem } from "../../types/clip";
+import { translations, type Language } from "../../locales/translations";
+import { ClipBadge } from "./ClipBadge";
+import { FEEDBACK_TIMEOUT_MS } from "../../constants";
 
 interface ClipCardProps {
   clip: ClipItem;
@@ -38,71 +36,12 @@ export const ClipCard = ({
   const t = translations[lang];
 
   const lines = clip.type === "image" ? [] : clip.content.split("\n");
-  const isMultiLine = lines.length > 1;
   const isLong = clip.type !== "image" && (lines.length > 5 || clip.content.length > 250);
 
   const handleCopy = () => {
     onCopy(clip.content);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  const renderBadge = () => {
-    switch (clip.type) {
-      case "image":
-        return (
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-            <ImageIcon className="w-3 h-3" />
-            {t.cards.badgeImage}
-            {clip.imageWidth && clip.imageHeight && (
-              <span className="ml-1 opacity-75 font-mono text-[10px]">
-                ({clip.imageWidth}×{clip.imageHeight})
-              </span>
-            )}
-          </span>
-        );
-      case "color":
-        return (
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-purple-500/10 text-purple-500 border border-purple-500/20">
-            <span
-              className="w-2.5 h-2.5 rounded-full border border-black/20 dark:border-white/30"
-              style={{ backgroundColor: clip.content.trim() }}
-            />
-            {t.cards.badgeColor}
-          </span>
-        );
-      case "url":
-        return (
-          <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20">
-            <Link className="w-3 h-3" />
-            {t.cards.badgeUrl}
-          </span>
-        );
-      case "code":
-        return (
-          <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium theme-accent-subtle theme-accent-text theme-accent-border border">
-            <Code2 className="w-3 h-3" />
-            {t.cards.badgeCode}
-            {isMultiLine && (
-              <span className="ml-1 opacity-75 font-mono text-[10px]">
-                ({lines.length} {t.cards.lines})
-              </span>
-            )}
-          </span>
-        );
-      default:
-        return (
-          <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium theme-bg-app theme-text-muted border theme-border-app">
-            <FileText className="w-3 h-3" />
-            {t.cards.badgeText}
-            {isMultiLine && (
-              <span className="ml-1 opacity-75 font-mono text-[10px]">
-                ({lines.length} {t.cards.lines})
-              </span>
-            )}
-          </span>
-        );
-    }
+    setTimeout(() => setCopied(false), FEEDBACK_TIMEOUT_MS);
   };
 
   const formatDateTime = (timestamp: number) => {
@@ -132,7 +71,7 @@ export const ClipCard = ({
     >
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
-          {renderBadge()}
+          <ClipBadge clip={clip} lang={lang} size="sm" showDetails={true} />
           <span
             className="text-[11px] theme-text-muted font-mono"
             title={new Date(clip.createdAt).toLocaleString(

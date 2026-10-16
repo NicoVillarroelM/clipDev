@@ -1,4 +1,5 @@
 export interface ElectronAPI {
+  platform?: string;
   writeClipboard: (text: string) => void;
   getCurrentClipboard: () => Promise<string>;
   onClipboardUpdate: (callback: (text: string) => void) => () => void;

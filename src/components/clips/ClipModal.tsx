@@ -5,14 +5,12 @@ import {
   Check,
   Pin,
   Trash2,
-  Code2,
-  Link,
-  FileText,
-  Image as ImageIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { ClipItem } from "../types/clip";
-import { translations, type Language } from "../locales/translations";
+import type { ClipItem } from "../../types/clip";
+import { translations, type Language } from "../../locales/translations";
+import { ClipBadge } from "./ClipBadge";
+import { FEEDBACK_TIMEOUT_MS } from "../../constants";
 
 interface ClipModalProps {
   clip: ClipItem | null;
@@ -50,50 +48,7 @@ export const ClipModal = ({
     if (!clip) return;
     onCopy(clip.content);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  const renderBadge = (clipItem: ClipItem) => {
-    switch (clipItem.type) {
-      case "image":
-        return (
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-            <ImageIcon className="w-3.5 h-3.5" />
-            {t.cards.badgeImage}
-          </span>
-        );
-      case "color":
-        return (
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-500 border border-purple-500/20">
-            <span
-              className="w-2.5 h-2.5 rounded-full border border-black/20 dark:border-white/30"
-              style={{ backgroundColor: clipItem.content.trim() }}
-            />
-            {t.cards.badgeColor}
-          </span>
-        );
-      case "url":
-        return (
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20">
-            <Link className="w-3.5 h-3.5" />
-            {t.cards.badgeUrl}
-          </span>
-        );
-      case "code":
-        return (
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium theme-accent-subtle theme-accent-text theme-accent-border border">
-            <Code2 className="w-3.5 h-3.5" />
-            {t.cards.badgeCode}
-          </span>
-        );
-      default:
-        return (
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium theme-bg-app theme-text-muted border theme-border-app">
-            <FileText className="w-3.5 h-3.5" />
-            {t.cards.badgeText}
-          </span>
-        );
-    }
+    setTimeout(() => setCopied(false), FEEDBACK_TIMEOUT_MS);
   };
 
   return (
@@ -119,7 +74,7 @@ export const ClipModal = ({
           >
             <div className="flex items-center justify-between p-4 border-b theme-border-app theme-bg-header">
               <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-                {renderBadge(clip)}
+                <ClipBadge clip={clip} lang={lang} size="md" showDetails={false} />
                 {clip.type === "image" ? (
                   <>
                     {clip.imageWidth && clip.imageHeight && (

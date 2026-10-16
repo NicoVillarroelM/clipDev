@@ -27,11 +27,12 @@
 ## 🌟 Características Principales
 
 ### 1. 📋 Portapapeles Inteligente
-* **Monitoreo en segundo plano:** Detecta automáticamente cualquier texto copiado en tu sistema sin interrumpir tu flujo de trabajo.
+* **Monitoreo en segundo plano:** Detecta automáticamente cualquier texto o imagen copiada en tu sistema sin interrumpir tu flujo de trabajo.
 * **Detección semántica de contenido:** Identifica automáticamente si lo copiado es:
   * 💻 **Código o comandos de terminal** (JavaScript, TypeScript, HTML, SQL, Git, Docker, etc.).
   * 🔗 **Enlaces y URLs** (con acceso directo para abrirlos con un clic en tu navegador seguro).
   * 🎨 **Colores** (códigos Hexadecimales y RGB con vista previa en miniatura en tiempo real).
+  * 🖼️ **Imágenes** (capturas o imágenes del portapapeles con resolución y visor modal).
   * 📝 **Texto general**.
 * **Fijado prioritario (Pin):** Mantén tus fragmentos más importantes en la parte superior.
 * **Buscador en tiempo real y filtros:** Encuentra rápidamente cualquier fragmento copiado por tipo o palabra clave.
@@ -44,19 +45,21 @@
   * **Estructura:** Encabezados (`H1`, `H2`), Párrafos (`P`), Listas con viñetas y Listas numeradas.
   * **Bloques técnicos:** Citas (`Blockquote`) y Bloques de código preformateados (`Pre / Code`).
   * **Historial y limpieza:** Deshacer (`Undo`), Rehacer (`Redo`) y Quitar formato.
+* **Soporte avanzado de imágenes:** Pegado directo de imágenes desde el portapapeles, toolbar flotante con redimensionamiento rápido (25%, 50%, 75%, 100%), control de alineación y ajuste interactivo por arrastre.
 * **Pegado inteligente:** Conserva el formato enriquecido al pegar desde Word, Google Docs o sitios web, y mantiene la sangría en bloques de código.
 * **Organización por colores:** Asigna etiquetas visuales a tus notas (Ámbar, Esmeralda, Azul, Púrpura, Rosa o Neutro).
 * **Métricas en vivo:** Contador de caracteres y palabras en tiempo real.
 
 ### 3. 🔒 100% Privado, Local y Permanente
 * **Sin cuentas ni inicio de sesión:** No requiere internet ni sincronización con la nube. Toda tu información te pertenece y se queda en tu equipo.
-* **Persistencia física garantizada:** Tus datos se guardan tanto en memoria como en archivos JSON locales físicos dentro de `%APPDATA%\clipDev\` (`clips.json` y `notes.json`). Puedes apagar, reiniciar o desconectar tu PC y todo estará exactamente donde lo dejaste.
+* **Persistencia atómica en disco:** Tus datos se guardan tanto en memoria como en archivos JSON locales físicos dentro de `%APPDATA%\clipDev\` (`clips.json` y `notes.json`). El guardado atómico previene cualquier corrupción de datos ante cierres inesperados del sistema.
 
 ### 4. ⌨️ Acceso Rápido Global
 * Presiona **`Ctrl + Shift + V`** desde cualquier ventana o juego en Windows para mostrar u ocultar ClipDev al instante.
 
 ### 5. 🎨 Personalización y Accesibilidad
 * **Temas Claro y Oscuro** con contraste de alta legibilidad.
+* **Acabado de ventana personalizable:** Alterna entre interfaz sólida clásica o acabado acrílico/translúcido (`Glass`).
 * **6 Paletas de color de acento:** Ámbar, Esmeralda, Cian, Azul, Violeta y Rosa.
 * **Escala de interfaz ajustable:** Soporte para tamaño Normal (100%), Grande (112%) y Muy Grande (125%) para facilitar la lectura.
 * **Bilingüe:** Interfaz completa en **Español** e **Inglés** intercambiable con un solo clic.
@@ -113,22 +116,53 @@ Para usar ClipDev de forma independiente sin abrir terminales ni servidores:
 ```text
 clipDev/
 ├── electron/
-│   ├── main.ts              # Proceso principal de Electron, atajos globales y almacenamiento
+│   ├── main.ts              # Proceso principal de Electron, atajos globales y guardado atómico
 │   └── preload.ts           # Puente seguro IPC expuesto a React (ContextBridge)
 ├── public/
 │   ├── clipDev_logo.ico     # Icono nativo de Windows (multi-resolución)
 │   └── clipDev_logo.png     # Favicon público
 ├── src/
 │   ├── assets/              # Recursos gráficos optimizados del frontend
-│   │   └── clipDev_logo.png
-│   ├── components/          # Componentes modulares de React
-│   │   ├── ClipCard.tsx           # Tarjeta individual del historial
-│   │   ├── ClipModal.tsx          # Modal para ver y copiar código extenso
-│   │   ├── ClipSkeleton.tsx       # Esqueleto de carga inicial fluido
-│   │   ├── ConfirmDeleteModal.tsx # Diálogo de confirmación para borrar
-│   │   ├── NotesView.tsx          # Editor enriquecido de notas
-│   │   ├── ThemeSelector.tsx      # Selector visual de paletas
-│   │   └── TitleBar.tsx           # Barra de título arrastrable personalizada
+│   ├── constants/           # Capa centralizada de constantes de aplicación
+│   │   ├── app.ts           # Versión, límites, timeouts y claves de almacenamiento
+│   │   ├── filters.ts       # Configuración de filtros del portapapeles
+│   │   ├── notes.ts         # Paleta de notas y presets de redimensión de imagen
+│   │   ├── settings.ts      # Opciones de escala e idiomas
+│   │   └── index.ts         # Exportador unificado de constantes
+│   ├── hooks/               # Custom hooks de lógica y estado desacoplado
+│   │   ├── useAppearance.ts # Tema, modo, acabado translúcido, zoom y notificaciones
+│   │   ├── useClips.ts      # Historial de portapapeles, IPC, filtros y búsqueda
+│   │   ├── useNotes.ts      # Persistencia y gestión de notas
+│   │   ├── useNoteImageEditor.ts # Selección, alineación y redimensión de imágenes
+│   │   └── index.ts         # Exportador unificado de hooks
+│   ├── components/          # Componentes organizados por dominio
+│   │   ├── clips/           # Módulo del portapapeles
+│   │   │   ├── ClipBadge.tsx      # Insignia semántica de tipo de clip
+│   │   │   ├── ClipCard.tsx       # Tarjeta individual con acciones
+│   │   │   ├── ClipModal.tsx      # Modal detallado para código o imágenes
+│   │   │   ├── ClipSkeleton.tsx   # Esqueleto de carga fluido
+│   │   │   ├── FilterBar.tsx      # Barra de búsqueda y filtros
+│   │   │   └── index.ts
+│   │   ├── notes/           # Módulo del editor de notas
+│   │   │   ├── NoteSidebar.tsx    # Barra lateral de lista y creación
+│   │   │   ├── NoteHeader.tsx     # Título, color, copia y eliminación
+│   │   │   ├── NoteFormatToolbar.tsx # Barra de formato de texto enriquecido
+│   │   │   ├── NoteImageToolbar.tsx  # Toolbar flotante de imágenes
+│   │   │   ├── NoteFooter.tsx     # Estado de disco y conteo de palabras
+│   │   │   ├── NotesView.tsx      # Orquestador del bloc de notas
+│   │   │   └── index.ts
+│   │   ├── layout/          # Ventana y controles estructurales
+│   │   │   ├── TitleBar.tsx       # Barra de título arrastrable y pestañas
+│   │   │   ├── ScaleToast.tsx     # Alerta flotante de nivel de zoom
+│   │   │   └── index.ts
+│   │   ├── settings/        # Preferencias y apariencia
+│   │   │   ├── SettingsPopover.tsx# Menú popover de ajustes y updates
+│   │   │   ├── ThemeSelector.tsx  # Selector visual de paletas
+│   │   │   └── index.ts
+│   │   ├── modals/          # Diálogos modales
+│   │   │   ├── ConfirmDeleteModal.tsx # Confirmación de eliminación y vaciado
+│   │   │   └── index.ts
+│   │   └── index.ts         # Barrel export maestro de componentes
 │   ├── locales/
 │   │   └── translations.ts  # Textos y traducciones completas en ES y EN
 │   ├── types/
@@ -136,9 +170,9 @@ clipDev/
 │   │   ├── electron.d.ts    # Tipado seguro para window.electronAPI
 │   │   └── theme.ts         # Tipado de temas, modos y escalas
 │   ├── utils/
-│   │   └── detector.ts      # Detección heurística de código, URLs y colores
-│   ├── App.css              # Variables CSS de temas, editor de notas y estilos
-│   ├── App.tsx              # Componente raíz y orquestador del estado
+│   │   └── detector.ts      # Detección heurística de código, URLs, colores e imágenes
+│   ├── App.css              # Variables CSS de temas, efectos translúcidos y estilos
+│   ├── App.tsx              # Orquestador ligero de vistas y estado global
 │   └── main.tsx             # Punto de entrada de React con ErrorBoundary
 ├── index.html               # Plantilla HTML base con CSP estricto
 ├── package.json             # Scripts y configuración de empaquetado

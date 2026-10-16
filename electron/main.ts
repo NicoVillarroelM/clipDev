@@ -23,9 +23,12 @@ let lastClipboardText = "";
 let lastImageHash = "";
 let clipboardInterval: NodeJS.Timeout | null = null;
 
-function createWindow() {
+async function createWindow() {
+  const isMac = process.platform === "darwin";
   const preloadPath = path.join(__dirname, "preload.cjs");
   const candidateIcons = [
+    path.join(process.env.APP_ROOT, "dist", isMac ? "clipDev_logo.png" : "clipDev_logo.ico"),
+    path.join(process.env.APP_ROOT, "public", isMac ? "clipDev_logo.png" : "clipDev_logo.ico"),
     path.join(process.env.APP_ROOT, "dist", "clipDev_logo.ico"),
     path.join(process.env.APP_ROOT, "public", "clipDev_logo.ico"),
   ];
@@ -36,7 +39,10 @@ function createWindow() {
     height: 580,
     minWidth: 550,
     frame: false,
-    backgroundMaterial: "acrylic",
+    titleBarStyle: isMac ? "hiddenInset" : undefined,
+    trafficLightPosition: isMac ? { x: 14, y: 14 } : undefined,
+    backgroundMaterial: isMac ? undefined : "acrylic",
+    vibrancy: isMac ? "under-window" : undefined,
     backgroundColor: "#00000000",
     icon: iconPath,
     show: false,
@@ -51,7 +57,7 @@ function createWindow() {
   // Impedir popups o ventanas no autorizadas: abrir enlaces externos en el navegador del usuario de forma segura
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("https:") || url.startsWith("http:")) {
-      shell.openExternal(url);
+      void shell.openExternal(url);
     }
     return { action: "deny" };
   });
@@ -62,7 +68,7 @@ function createWindow() {
     if (currentUrl && url !== currentUrl) {
       event.preventDefault();
       if (url.startsWith("https:") || url.startsWith("http:")) {
-        shell.openExternal(url);
+        void shell.openExternal(url);
       }
     }
   });
@@ -83,9 +89,9 @@ function createWindow() {
   });
 
   if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL);
+    await win.loadURL(VITE_DEV_SERVER_URL);
   } else {
-    win.loadFile(path.join(RENDERER_DIST, "index.html"));
+    await win.loadFile(path.join(RENDERER_DIST, "index.html"));
   }
 }
 
@@ -123,6 +129,41 @@ async function readClipboardImage(): Promise<{
 }
 
 // Iniciar monitoreo del portapapeles
+async function checkClipboard() {
+  try {
+    const rawText = await clipboard.readText();
+    const currentText = typeof rawText === "string" ? rawText : "";
+    if (currentText.trim() !== "" && currentText !== lastClipboardText) {
+      lastClipboardText = currentText;
+      lastImageHash = "";
+      if (win && !win.isDestroyed()) {
+        win.webContents.send("clipboard:updated", currentText);
+      }
+      return;
+    }
+
+    const imgData = await readClipboardImage();
+    if (imgData) {
+      const hash = crypto.createHash("md5").update(imgData.buffer).digest("hex");
+      if (hash !== lastImageHash) {
+        lastImageHash = hash;
+        lastClipboardText = "";
+        if (win && !win.isDestroyed()) {
+          win.webContents.send("clipboard:updated-image", {
+            content: imgData.content,
+            width: imgData.width,
+            height: imgData.height,
+            sizeLabel: imgData.sizeLabel,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error reading clipboard:", err);
+  }
+}
+
+// Iniciar monitoreo del portapapeles
 async function startClipboardWatcher() {
   try {
     const rawInit = await clipboard.readText();
@@ -136,49 +177,21 @@ async function startClipboardWatcher() {
     lastImageHash = "";
   }
 
-  clipboardInterval = setInterval(async () => {
-    try {
-      const rawText = await clipboard.readText();
-      const currentText = typeof rawText === "string" ? rawText : "";
-      if (currentText.trim() !== "" && currentText !== lastClipboardText) {
-        lastClipboardText = currentText;
-        lastImageHash = "";
-        if (win && !win.isDestroyed()) {
-          win.webContents.send("clipboard:updated", currentText);
-        }
-        return;
-      }
-
-      const imgData = await readClipboardImage();
-      if (imgData) {
-        const hash = crypto.createHash("md5").update(imgData.buffer).digest("hex");
-        if (hash !== lastImageHash) {
-          lastImageHash = hash;
-          lastClipboardText = "";
-          if (win && !win.isDestroyed()) {
-            win.webContents.send("clipboard:updated-image", {
-              content: imgData.content,
-              width: imgData.width,
-              height: imgData.height,
-              sizeLabel: imgData.sizeLabel,
-            });
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Error reading clipboard:", err);
-    }
+  clipboardInterval = setInterval(() => {
+    void checkClipboard();
   }, 750);
 }
 
-app.whenReady().then(() => {
+async function initializeApp() {
+  await app.whenReady();
+
   // Denegar permisos innecesarios (cámara, micrófono, geolocalización)
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
     callback(false);
   });
 
-  createWindow();
-  startClipboardWatcher();
+  await createWindow();
+  await startClipboardWatcher();
 
   if (app.isPackaged) {
     setTimeout(() => {
@@ -200,10 +213,17 @@ app.whenReady().then(() => {
   });
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+    if (win) {
+      win.show();
+      win.focus();
+    } else if (BrowserWindow.getAllWindows().length === 0) {
+      void createWindow();
     }
   });
+}
+
+void initializeApp().catch((err) => {
+  console.error("Failed to initialize app:", err);
 });
 
 app.on("will-quit", () => {
@@ -226,17 +246,17 @@ ipcMain.handle("clipboard:get-current", async () => {
   }
 });
 
-ipcMain.on("clipboard:write", async (_event, text: string) => {
+ipcMain.on("clipboard:write", (_event, text: string) => {
   lastClipboardText = text; // Evita loop en el watcher
   lastImageHash = "";
-  await clipboard.writeText(text);
+  void clipboard.writeText(text);
 });
 
 ipcMain.handle("clipboard:get-current-image", async () => {
   return await readClipboardImage();
 });
 
-ipcMain.on("clipboard:write-image", async (_event, dataUrl: string) => {
+ipcMain.on("clipboard:write-image", (_event, dataUrl: string) => {
   try {
     const img = nativeImage.createFromDataURL(dataUrl);
     const buffer = img.toPNG();
@@ -244,7 +264,7 @@ ipcMain.on("clipboard:write-image", async (_event, dataUrl: string) => {
     lastClipboardText = "";
     const blob = new Blob([buffer], { type: "image/png" });
     const item = new ClipboardItem({ "image/png": blob });
-    await clipboard.write([item]);
+    void clipboard.write([item]);
   } catch (err) {
     console.error("Error writing image to clipboard:", err);
   }
@@ -286,8 +306,29 @@ const userDataPath = app.getPath("userData");
 const clipsFilePath = path.join(userDataPath, "clips.json");
 const notesFilePath = path.join(userDataPath, "notes.json");
 
+let saveClipsPromise: Promise<void> = Promise.resolve();
+let saveNotesPromise: Promise<void> = Promise.resolve();
+
+async function atomicWriteFile(filePath: string, content: string): Promise<void> {
+  const tempPath = `${filePath}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
+  try {
+    await fs.promises.writeFile(tempPath, content, "utf-8");
+    await fs.promises.rename(tempPath, filePath);
+  } catch (err) {
+    try {
+      if (fs.existsSync(tempPath)) {
+        await fs.promises.unlink(tempPath);
+      }
+    } catch {}
+    throw err;
+  }
+}
+
 ipcMain.handle("storage:load-disk", async () => {
   try {
+    await saveClipsPromise;
+    await saveNotesPromise;
+
     let clips = null;
     let notes = null;
 
@@ -320,18 +361,18 @@ ipcMain.handle("storage:load-disk", async () => {
   }
 });
 
-ipcMain.on("storage:save-clips", async (_event, clipsJson: string) => {
-  try {
-    await fs.promises.writeFile(clipsFilePath, clipsJson, "utf-8");
-  } catch (err) {
-    console.error("Error al guardar clips en disco:", err);
-  }
+ipcMain.on("storage:save-clips", (_event, clipsJson: string) => {
+  saveClipsPromise = saveClipsPromise
+    .then(() => atomicWriteFile(clipsFilePath, clipsJson))
+    .catch((err) => {
+      console.error("Error al guardar clips en disco:", err);
+    });
 });
 
-ipcMain.on("storage:save-notes", async (_event, notesJson: string) => {
-  try {
-    await fs.promises.writeFile(notesFilePath, notesJson, "utf-8");
-  } catch (err) {
-    console.error("Error al guardar notas en disco:", err);
-  }
+ipcMain.on("storage:save-notes", (_event, notesJson: string) => {
+  saveNotesPromise = saveNotesPromise
+    .then(() => atomicWriteFile(notesFilePath, notesJson))
+    .catch((err) => {
+      console.error("Error al guardar notas en disco:", err);
+    });
 });
