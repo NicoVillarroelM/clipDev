@@ -27,11 +27,12 @@ let clipboardInterval: NodeJS.Timeout | null = null;
 async function createWindow() {
   const isMac = process.platform === "darwin";
   const preloadPath = path.join(__dirname, "preload.cjs");
+  const appRoot = process.env.APP_ROOT || process.cwd();
   const candidateIcons = [
-    path.join(process.env.APP_ROOT, "dist", isMac ? "clipDev_logo.png" : "clipDev_logo.ico"),
-    path.join(process.env.APP_ROOT, "public", isMac ? "clipDev_logo.png" : "clipDev_logo.ico"),
-    path.join(process.env.APP_ROOT, "dist", "clipDev_logo.ico"),
-    path.join(process.env.APP_ROOT, "public", "clipDev_logo.ico"),
+    path.join(appRoot, "dist", isMac ? "clipDev_logo.png" : "clipDev_logo.ico"),
+    path.join(appRoot, "public", isMac ? "clipDev_logo.png" : "clipDev_logo.ico"),
+    path.join(appRoot, "dist", "clipDev_logo.ico"),
+    path.join(appRoot, "public", "clipDev_logo.ico"),
   ];
   const iconPath = candidateIcons.find((p) => fs.existsSync(p));
 
@@ -153,8 +154,10 @@ async function readClipboardImage(): Promise<{
       const imgType = item.types.find((t) => t.startsWith("image/"));
       if (imgType) {
         const blob = await item.getType(imgType);
-        const buffer = Buffer.from(await blob.arrayBuffer());
-        return processImageBuffer(buffer);
+        if (blob instanceof Blob) {
+          const buffer = Buffer.from(await blob.arrayBuffer());
+          return processImageBuffer(buffer);
+        }
       }
     }
     return null;
@@ -190,21 +193,23 @@ async function checkClipboard() {
       const imgType = item.types.find((t) => t.startsWith("image/"));
       if (imgType) {
         const blob = await item.getType(imgType);
-        const buffer = Buffer.from(await blob.arrayBuffer());
-        const hash = crypto.createHash("md5").update(buffer).digest("hex");
+        if (blob instanceof Blob) {
+          const buffer = Buffer.from(await blob.arrayBuffer());
+          const hash = crypto.createHash("md5").update(buffer).digest("hex");
 
-        if (hash === lastImageHash) {
+          if (hash === lastImageHash) {
+            return;
+          }
+
+          lastImageHash = hash;
+          lastClipboardText = "";
+
+          const imgData = processImageBuffer(buffer);
+          if (imgData && win && !win.isDestroyed()) {
+            win.webContents.send("clipboard:updated-image", imgData);
+          }
           return;
         }
-
-        lastImageHash = hash;
-        lastClipboardText = "";
-
-        const imgData = processImageBuffer(buffer);
-        if (imgData && win && !win.isDestroyed()) {
-          win.webContents.send("clipboard:updated-image", imgData);
-        }
-        return;
       }
     }
   } catch (err) {
@@ -224,9 +229,11 @@ async function startClipboardWatcher() {
           const imgType = item.types.find((t) => t.startsWith("image/"));
           if (imgType) {
             const blob = await item.getType(imgType);
-            const buffer = Buffer.from(await blob.arrayBuffer());
-            lastImageHash = crypto.createHash("md5").update(buffer).digest("hex");
-            break;
+            if (blob instanceof Blob) {
+              const buffer = Buffer.from(await blob.arrayBuffer());
+              lastImageHash = crypto.createHash("md5").update(buffer).digest("hex");
+              break;
+            }
           }
         }
       }
@@ -349,7 +356,7 @@ ipcMain.on("clipboard:write-image", async (_event, dataUrl: string) => {
     const buffer = img.toPNG();
     lastImageHash = crypto.createHash("md5").update(buffer).digest("hex");
     lastClipboardText = "";
-    const blob = new Blob([buffer], { type: "image/png" });
+    const blob = new Blob([new Uint8Array(buffer)], { type: "image/png" });
     const item = new ClipboardItem({ "image/png": blob });
     await clipboard.write([item]);
   } catch (err) {
