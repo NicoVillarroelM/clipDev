@@ -9,6 +9,7 @@
   [![React](https://img.shields.io/badge/React-19.x-61DAFB?logo=react&logoColor=black)](https://react.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+  [![SQLite](https://img.shields.io/badge/SQLite-Native_WAL-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
   [![Vite](https://img.shields.io/badge/Vite-8.x-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
   [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 </div>
@@ -19,20 +20,20 @@
 > Si solo quieres usar la aplicación como usuario final, **no necesitas clonar el repositorio ni usar Node.js**.
 > 
 > Dirígete a la sección de **[Releases (Versiones Publicadas)](https://github.com/NicoVillarroelM/clipDev/releases)** en GitHub y descarga directamente el archivo ejecutable:
-> * **`ClipDev 1.0.0.exe` (Portable):** Descarga y haz doble clic para usar de inmediato sin instalar.
-> * **`ClipDev Setup 1.0.0.exe` (Instalador):** Crea accesos directos en el Escritorio y Menú Inicio.
+> * **`ClipDev 1.0.3.exe` (Portable):** Descarga y haz doble clic para usar de inmediato sin instalar.
+> * **`ClipDev Setup 1.0.3.exe` (Instalador):** Crea accesos directos en el Escritorio y Menú Inicio.
 
 ---
 
 ## 🌟 Características Principales
 
 ### 1. 📋 Portapapeles Inteligente
-* **Monitoreo en segundo plano:** Detecta automáticamente cualquier texto o imagen copiada en tu sistema sin interrumpir tu flujo de trabajo.
+* **Monitoreo en segundo plano (0% CPU en reposo):** Detecta automáticamente cualquier texto o imagen copiada mediante verificación nativa de formatos y comparación de hashes MD5 sobre buffers crudos.
 * **Detección semántica de contenido:** Identifica automáticamente si lo copiado es:
   * 💻 **Código o comandos de terminal** (JavaScript, TypeScript, HTML, SQL, Git, Docker, etc.).
   * 🔗 **Enlaces y URLs** (con acceso directo para abrirlos con un clic en tu navegador seguro).
   * 🎨 **Colores** (códigos Hexadecimales y RGB con vista previa en miniatura en tiempo real).
-  * 🖼️ **Imágenes** (capturas o imágenes del portapapeles con resolución y visor modal).
+  * 🖼️ **Imágenes** (capturas o imágenes del portapapeles con compresión inteligente, resolución y visor modal).
   * 📝 **Texto general**.
 * **Fijado prioritario (Pin):** Mantén tus fragmentos más importantes en la parte superior.
 * **Buscador en tiempo real y filtros:** Encuentra rápidamente cualquier fragmento copiado por tipo o palabra clave.
@@ -50,9 +51,10 @@
 * **Organización por colores:** Asigna etiquetas visuales a tus notas (Ámbar, Esmeralda, Azul, Púrpura, Rosa o Neutro).
 * **Métricas en vivo:** Contador de caracteres y palabras en tiempo real.
 
-### 3. 🔒 100% Privado, Local y Permanente
+### 3. 🔒 100% Privado, Local y Motor SQLite Nativo
 * **Sin cuentas ni inicio de sesión:** No requiere internet ni sincronización con la nube. Toda tu información te pertenece y se queda en tu equipo.
-* **Persistencia atómica en disco:** Tus datos se guardan tanto en memoria como en archivos JSON locales físicos dentro de `%APPDATA%\clipDev\` (`clips.json` y `notes.json`). El guardado atómico previene cualquier corrupción de datos ante cierres inesperados del sistema.
+* **Base de datos SQLite integrada (`node:sqlite`):** Tus clips y notas se almacenan en una base de datos relacional local (`clipdev.db`) con modo **`WAL` (Write-Ahead Logging)** y **`auto_vacuum = FULL`**, logrando transacciones ultrarrápidas, cero corrupción ante cierres inesperados y compactación automática del espacio en disco.
+* **Almacenamiento binario (`BLOB`) y sincronización diferencial:** Las imágenes se guardan como bytes binarios puros en lugar de cadenas Base64 pesadas, y solo se actualizan en disco las filas modificadas (`INSERT` / `UPDATE` / `DELETE`).
 
 ### 4. ⌨️ Acceso Rápido Global
 * Presiona **`Ctrl + Shift + V`** desde cualquier ventana o juego en Windows para mostrar u ocultar ClipDev al instante.
@@ -104,8 +106,8 @@ Para usar ClipDev de forma independiente sin abrir terminales ni servidores:
 | Comando | Descripción | Archivo resultante |
 | :--- | :--- | :--- |
 | `pnpm run dist:dir` | **Desempaquetado (Arranque instantáneo)** | `release/win-unpacked/ClipDev.exe` |
-| `pnpm run dist:portable` | **Portable (Ejecutable único sin instalar)** | `release/ClipDev 1.0.0.exe` |
-| `pnpm run dist` | **Instalador estándar de Windows (NSIS)** | `release/ClipDev Setup 1.0.0.exe` |
+| `pnpm run dist:portable` | **Portable (Ejecutable único sin instalar)** | `release/ClipDev 1.0.4.exe` |
+| `pnpm run dist` | **Instalador estándar de Windows (NSIS)** | `release/ClipDev Setup 1.0.4.exe` |
 
 > **Tip de rendimiento:** Para un arranque instantáneo (en menos de 1 segundo), ejecuta directamente `release/win-unpacked/ClipDev.exe` o créale un acceso directo en tu Escritorio.
 
@@ -116,7 +118,13 @@ Para usar ClipDev de forma independiente sin abrir terminales ni servidores:
 ```text
 clipDev/
 ├── electron/
-│   ├── main.ts              # Proceso principal de Electron, atajos globales y guardado atómico
+│   ├── database/            # Motor de base de datos SQLite nativo (node:sqlite)
+│   │   ├── index.ts         # Clase principal ClipDevDatabase y transacciones
+│   │   ├── mappers.ts       # Transformadores Base64 <-> BLOB y mapeo de filas
+│   │   ├── migrator.ts      # Migración automática desde clips.json y notes.json
+│   │   ├── schema.ts        # PRAGMAs (WAL, auto_vacuum) y consultas SQL preparadas
+│   │   └── types.ts         # Interfaces tipadas del modelo de persistencia
+│   ├── main.ts              # Proceso principal de Electron, atajos globales y monitoreo de portapapeles
 │   └── preload.ts           # Puente seguro IPC expuesto a React (ContextBridge)
 ├── public/
 │   ├── clipDev_logo.ico     # Icono nativo de Windows (multi-resolución)
@@ -184,15 +192,14 @@ clipDev/
 
 ## 💾 Dónde se almacenan tus datos
 
-Toda la información se guarda de forma persistente y privada en tu usuario de Windows:
+Toda la información se guarda de forma persistente y privada en tu usuario de Windows mediante una única base de datos SQLite:
 
 ```text
 %APPDATA%\clipDev\
-├── clips.json   # Historial completo de clips copiados
-└── notes.json   # Colección de notas enriquecidas
+└── clipdev.db   # Base de datos SQLite (tablas clips y notes + imágenes en BLOB binario)
 ```
 
-Puedes respaldar, copiar o migrar estos dos archivos en cualquier momento para mover tus datos a otro equipo.
+> **Migración automática:** Si vienes de una versión anterior que usaba `clips.json` y `notes.json`, ClipDev migra tus datos automáticamente a `clipdev.db` al abrir la aplicación y limpia los archivos antiguos. Puedes respaldar o copiar `clipdev.db` en cualquier momento para llevar tus datos a otro equipo.
 
 ---
 

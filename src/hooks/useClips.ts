@@ -33,8 +33,13 @@ export function useClips({ imageFilterLabel }: UseClipsOptions) {
         .then((data) => {
           if (!isMounted) return;
           if (data.clips && data.clips.length > 0) {
-            setClips((prev) => (prev.length === 0 ? data.clips! : prev));
+            setClips(data.clips);
+          } else if (clipsRef.current.length > 0) {
+            window.electronAPI?.saveClipsToDisk?.(JSON.stringify(clipsRef.current));
           }
+          try {
+            localStorage.removeItem(STORAGE_KEYS.CLIPS);
+          } catch {}
           isHydratedRef.current = true;
         })
         .catch(() => {
@@ -50,10 +55,13 @@ export function useClips({ imageFilterLabel }: UseClipsOptions) {
 
   const saveToStorage = useCallback((clipsToSave: ClipItem[]) => {
     const json = JSON.stringify(clipsToSave);
-    try {
-      localStorage.setItem(STORAGE_KEYS.CLIPS, json);
-    } catch {}
-    window.electronAPI?.saveClipsToDisk?.(json);
+    if (window.electronAPI?.saveClipsToDisk) {
+      window.electronAPI.saveClipsToDisk(json);
+    } else {
+      try {
+        localStorage.setItem(STORAGE_KEYS.CLIPS, json);
+      } catch {}
+    }
   }, []);
 
   useEffect(() => {
