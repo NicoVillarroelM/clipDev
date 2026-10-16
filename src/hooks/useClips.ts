@@ -179,15 +179,35 @@ export function useClips({ imageFilterLabel }: UseClipsOptions) {
     };
   }, []);
 
-  const handleCopy = useCallback((content: string) => {
-    if (content.startsWith("data:image/") && window.electronAPI?.writeClipboardImage) {
-      window.electronAPI.writeClipboardImage(content);
+  const handleCopy = useCallback((content: string | { text: string; html?: string }) => {
+    if (typeof content === "string") {
+      if (content.startsWith("data:image/") && window.electronAPI?.writeClipboardImage) {
+        window.electronAPI.writeClipboardImage(content);
+        return;
+      }
+      if (window.electronAPI) {
+        window.electronAPI.writeClipboard(content);
+      } else {
+        navigator.clipboard.writeText(content);
+      }
       return;
     }
+
     if (window.electronAPI) {
       window.electronAPI.writeClipboard(content);
     } else {
-      navigator.clipboard.writeText(content);
+      if (typeof ClipboardItem !== "undefined" && content.html) {
+        const textBlob = new Blob([content.text], { type: "text/plain" });
+        const htmlBlob = new Blob([content.html], { type: "text/html" });
+        navigator.clipboard.write([
+          new ClipboardItem({
+            "text/plain": textBlob,
+            "text/html": htmlBlob,
+          }),
+        ]).catch(() => navigator.clipboard.writeText(content.text));
+      } else {
+        navigator.clipboard.writeText(content.text);
+      }
     }
   }, []);
 

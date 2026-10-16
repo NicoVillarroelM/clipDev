@@ -106,8 +106,8 @@ Para usar ClipDev de forma independiente sin abrir terminales ni servidores:
 | Comando | Descripción | Archivo resultante |
 | :--- | :--- | :--- |
 | `pnpm run dist:dir` | **Desempaquetado (Arranque instantáneo)** | `release/win-unpacked/ClipDev.exe` |
-| `pnpm run dist:portable` | **Portable (Ejecutable único sin instalar)** | `release/ClipDev 1.0.4.exe` |
-| `pnpm run dist` | **Instalador estándar de Windows (NSIS)** | `release/ClipDev Setup 1.0.4.exe` |
+| `pnpm run dist:portable` | **Portable (Ejecutable único sin instalar)** | `release/ClipDev 1.0.5.exe` |
+| `pnpm run dist` | **Instalador estándar de Windows (NSIS)** | `release/ClipDev Setup 1.0.5.exe` |
 
 > **Tip de rendimiento:** Para un arranque instantáneo (en menos de 1 segundo), ejecuta directamente `release/win-unpacked/ClipDev.exe` o créale un acceso directo en tu Escritorio.
 

@@ -9,12 +9,15 @@ import { NoteHeader } from "./NoteHeader";
 import { NoteFormatToolbar } from "./NoteFormatToolbar";
 import { NoteImageToolbar } from "./NoteImageToolbar";
 import { NoteFooter } from "./NoteFooter";
+import { formatNoteForClipboard } from "../../utils/clipboardFormat";
+import { handleMarkdownShortcuts } from "../../utils/markdown";
+import { formatBytes, getNoteByteSize } from "../../utils/formatSize";
 
 interface NotesViewProps {
   notes: NoteItem[];
   onSaveNote: (note: NoteItem) => void;
   onDeleteNote: (id: string) => void;
-  onCopyContent: (content: string) => void;
+  onCopyContent: (content: string | { text: string; html?: string }) => void;
   lang: Language;
 }
 
@@ -88,9 +91,12 @@ export const NotesView = ({
   };
 
   const handleCopy = () => {
-    if (!selectedNote || !editorRef.current) return;
-    const text = editorRef.current.innerText || selectedNote.content;
-    onCopyContent(text);
+    if (!selectedNote) return;
+    const formatted = formatNoteForClipboard(
+      selectedNote.content,
+      editorRef.current
+    );
+    onCopyContent(formatted);
     setCopied(true);
     setTimeout(() => setCopied(false), FEEDBACK_TIMEOUT_MS);
   };
@@ -112,9 +118,8 @@ export const NotesView = ({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      document.execCommand("insertText", false, "    ");
+    if (handleMarkdownShortcuts(e, handleEditorInput)) {
+      return;
     }
   };
 
@@ -185,6 +190,7 @@ export const NotesView = ({
             <NoteFooter
               wordsCount={wordsCount}
               charsCount={charsCount}
+              sizeLabel={formatBytes(getNoteByteSize(selectedNote))}
               lang={lang}
             />
           </>

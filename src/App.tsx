@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -14,6 +14,7 @@ import {
 import { useAppearance, useClips, useNotes } from "./hooks";
 import type { ClipItem, ActiveTab } from "./types/clip";
 import { INITIAL_MOUNT_DELAY_MS } from "./constants";
+import { formatBytes, getClipByteSize } from "./utils/formatSize";
 
 function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("clipboard");
@@ -84,6 +85,11 @@ function App() {
 
   const pinnedCount = clips.filter((c) => c.pinned).length;
 
+  const totalClipsSize = useMemo(() => {
+    const bytes = clips.reduce((acc, c) => acc + getClipByteSize(c), 0);
+    return formatBytes(bytes);
+  }, [clips]);
+
   return (
     <div
       data-theme={currentTheme}
@@ -126,6 +132,7 @@ function App() {
               clipsCount={clips.length}
               pinnedCount={pinnedCount}
               unpinnedCount={unpinnedCount}
+              totalSizeLabel={totalClipsSize}
               onClearUnpinned={handleOpenConfirmClear}
               lang={lang}
             />

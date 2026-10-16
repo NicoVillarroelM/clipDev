@@ -2,7 +2,8 @@ import { contextBridge, ipcRenderer, webFrame } from "electron";
 
 // APIs seguras expuestas al Renderer (React)
 contextBridge.exposeInMainWorld("electronAPI", {
-  writeClipboard: (text: string) => ipcRenderer.send("clipboard:write", text),
+  writeClipboard: (data: string | { text: string; html?: string }) =>
+    ipcRenderer.send("clipboard:write", data),
   getCurrentClipboard: () => ipcRenderer.invoke("clipboard:get-current"),
   onClipboardUpdate: (callback: (text: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, value: string) => callback(value);
