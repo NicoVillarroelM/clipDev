@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, memo } from "react";
 import {
   Pin,
   Trash2,
@@ -23,7 +23,7 @@ interface ClipCardProps {
   lang: Language;
 }
 
-export const ClipCard = ({
+export const ClipCard = memo(({
   clip,
   onCopy,
   onTogglePin,
@@ -44,8 +44,8 @@ export const ClipCard = ({
     setTimeout(() => setCopied(false), FEEDBACK_TIMEOUT_MS);
   };
 
-  const formatDateTime = (timestamp: number) => {
-    const date = new Date(timestamp);
+  const formattedDate = useMemo(() => {
+    const date = new Date(clip.createdAt);
     const dateStr = date.toLocaleDateString(lang === "es" ? "es-ES" : "en-US", {
       day: "2-digit",
       month: "2-digit",
@@ -56,7 +56,14 @@ export const ClipCard = ({
       minute: "2-digit",
     });
     return `${dateStr} · ${timeStr}`;
-  };
+  }, [clip.createdAt, lang]);
+
+  const fullDateTime = useMemo(() => {
+    return new Date(clip.createdAt).toLocaleString(
+      lang === "es" ? "es-ES" : "en-US",
+      { dateStyle: "full", timeStyle: "medium" }
+    );
+  }, [clip.createdAt, lang]);
 
   return (
     <motion.div
@@ -74,12 +81,9 @@ export const ClipCard = ({
           <ClipBadge clip={clip} lang={lang} size="sm" showDetails={true} />
           <span
             className="text-[11px] theme-text-muted font-mono"
-            title={new Date(clip.createdAt).toLocaleString(
-              lang === "es" ? "es-ES" : "en-US",
-              { dateStyle: "full", timeStyle: "medium" }
-            )}
+            title={fullDateTime}
           >
-            {formatDateTime(clip.createdAt)}
+            {formattedDate}
           </span>
         </div>
 
@@ -215,4 +219,4 @@ export const ClipCard = ({
       )}
     </motion.div>
   );
-};
+});

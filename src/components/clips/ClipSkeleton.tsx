@@ -1,10 +1,11 @@
+import { memo } from "react";
 import { motion } from "framer-motion";
 
 interface ClipSkeletonProps {
   count?: number;
 }
 
-export const ClipSkeleton = ({ count = 4 }: ClipSkeletonProps) => {
+export const ClipSkeleton = memo(({ count = 4 }: ClipSkeletonProps) => {
   return (
     <div className="flex flex-col gap-2 w-full">
       {Array.from({ length: count }).map((_, i) => (
@@ -47,4 +48,4 @@ export const ClipSkeleton = ({ count = 4 }: ClipSkeletonProps) => {
       ))}
     </div>
   );
-};
+});

@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { NoteItem } from "../types/clip";
-import { STORAGE_KEYS } from "../constants";
+import { STORAGE_KEYS, STORAGE_SAVE_DEBOUNCE_MS } from "../constants";
 
 interface UseNotesOptions {
   initialTitle: string;
@@ -9,6 +9,7 @@ interface UseNotesOptions {
 
 export function useNotes({ initialTitle, initialContent }: UseNotesOptions) {
   const isHydratedRef = useRef(false);
+  const isDirtyRef = useRef(false);
   const [notes, setNotes] = useState<NoteItem[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.NOTES);
@@ -35,6 +36,9 @@ export function useNotes({ initialTitle, initialContent }: UseNotesOptions) {
     }
   });
 
+  const notesRef = useRef(notes);
+  notesRef.current = notes;
+
   useEffect(() => {
     let isMounted = true;
     if (window.electronAPI?.loadStorageFromDisk) {
@@ -58,16 +62,48 @@ export function useNotes({ initialTitle, initialContent }: UseNotesOptions) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isHydratedRef.current) return;
-    const json = JSON.stringify(notes);
+  const saveToStorage = useCallback((notesToSave: NoteItem[]) => {
+    const json = JSON.stringify(notesToSave);
     try {
       localStorage.setItem(STORAGE_KEYS.NOTES, json);
     } catch {}
     window.electronAPI?.saveNotesToDisk?.(json);
-  }, [notes]);
+  }, []);
 
-  const handleSaveNote = (updatedNote: NoteItem) => {
+  useEffect(() => {
+    if (!isHydratedRef.current) return;
+    isDirtyRef.current = true;
+
+    const timer = setTimeout(() => {
+      saveToStorage(notesRef.current);
+      isDirtyRef.current = false;
+    }, STORAGE_SAVE_DEBOUNCE_MS);
+
+    const handleBeforeUnload = () => {
+      if (isDirtyRef.current) {
+        clearTimeout(timer);
+        saveToStorage(notesRef.current);
+        isDirtyRef.current = false;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [notes, saveToStorage]);
+
+  useEffect(() => {
+    return () => {
+      if (isDirtyRef.current) {
+        saveToStorage(notesRef.current);
+      }
+    };
+  }, [saveToStorage]);
+
+  const handleSaveNote = useCallback((updatedNote: NoteItem) => {
     setNotes((prev) => {
       const exists = prev.some((n) => n.id === updatedNote.id);
       if (exists) {
@@ -75,11 +111,11 @@ export function useNotes({ initialTitle, initialContent }: UseNotesOptions) {
       }
       return [updatedNote, ...prev];
     });
-  };
+  }, []);
 
-  const handleDeleteNote = (id: string) => {
+  const handleDeleteNote = useCallback((id: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== id));
-  };
+  }, []);
 
   return {
     notes,
