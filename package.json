@@ -1,6 +1,6 @@
 {
   "name": "clipdev",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "ClipDev - Gestor inteligente de portapapeles y notas",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -26,15 +26,16 @@
     "win": {
       "icon": "public/clipDev_logo.ico",
       "target": [
-        "nsis",
-        "portable"
+        "nsis"
       ]
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
+      "runAfterFinish": true,
       "shortcutName": "ClipDev"
     },
     "publish": [

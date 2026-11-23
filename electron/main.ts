@@ -1,4 +1,16 @@
-import { app, BrowserWindow, clipboard, ClipboardItem, globalShortcut, ipcMain, shell, session, nativeImage } from "electron";
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  ClipboardItem,
+  globalShortcut,
+  ipcMain,
+  Menu,
+  nativeImage,
+  session,
+  shell,
+  Tray,
+} from "electron";
 import { autoUpdater } from "electron-updater";
 import path from "node:path";
 import fs from "node:fs";
@@ -19,14 +31,66 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   ? path.join(process.env.APP_ROOT, "public")
   : RENDERER_DIST;
 
+const GITHUB_RELEASES_API = "https://api.github.com/repos/NicoVillarroelM/clipDev/releases/latest";
+const AUTO_UPDATE_INTERVAL_MS = 4 * 60 * 60 * 1000;
+const isHiddenLaunch = process.argv.includes("--hidden");
+
+type UpdateStatus =
+  | { status: "idle" }
+  | { status: "checking" }
+  | { status: "available"; version: string }
+  | { status: "downloading"; version?: string; percent: number }
+  | { status: "downloaded"; version: string }
+  | { status: "not-available"; currentVersion: string }
+  | { status: "manual-download"; version: string; downloadUrl: string }
+  | { status: "error"; message: string };
+
+interface AppPrefs {
+  autoLaunchInitialized?: boolean;
+}
+
 let win: BrowserWindow | null = null;
+let tray: Tray | null = null;
+let isQuitting = false;
 let lastClipboardText = "";
 let lastImageHash = "";
 let clipboardInterval: NodeJS.Timeout | null = null;
+let updateInterval: NodeJS.Timeout | null = null;
+let currentUpdateStatus: UpdateStatus = { status: "idle" };
 
-async function createWindow() {
+const userDataPath = app.getPath("userData");
+const prefsPath = path.join(userDataPath, "app-prefs.json");
+let storageDb: ClipDevDatabase | null = null;
+
+function getDatabase(): ClipDevDatabase {
+  if (!storageDb) {
+    storageDb = new ClipDevDatabase(userDataPath);
+  }
+  return storageDb;
+}
+
+function readAppPrefs(): AppPrefs {
+  try {
+    if (fs.existsSync(prefsPath)) {
+      return JSON.parse(fs.readFileSync(prefsPath, "utf-8")) as AppPrefs;
+    }
+  } catch {
+    // Ignore corrupted prefs file
+  }
+  return {};
+}
+
+function writeAppPrefs(next: AppPrefs): void {
+  try {
+    fs.mkdirSync(userDataPath, { recursive: true });
+    fs.writeFileSync(prefsPath, JSON.stringify(next, null, 2), "utf-8");
+  } catch (err) {
+    console.warn("Failed to persist app preferences:", err);
+  }
+}
+
+function resolveIconPath(): string | undefined {
   const isMac = process.platform === "darwin";
-  const preloadPath = path.join(__dirname, "preload.cjs");
   const appRoot = process.env.APP_ROOT || process.cwd();
   const candidateIcons = [
     path.join(appRoot, "dist", isMac ? "clipDev_logo.png" : "clipDev_logo.ico"),
@@ -34,7 +98,262 @@ async function createWindow() {
     path.join(appRoot, "dist", "clipDev_logo.ico"),
     path.join(appRoot, "public", "clipDev_logo.ico"),
   ];
-  const iconPath = candidateIcons.find((p) => fs.existsSync(p));
+  return candidateIcons.find((p) => fs.existsSync(p));
+}
+
+function showMainWindow(): void {
+  if (!win || win.isDestroyed()) return;
+  if (win.isMinimized()) {
+    win.restore();
+  }
+  win.show();
+  win.focus();
+}
+
+function toggleMainWindow(): void {
+  if (!win || win.isDestroyed()) return;
+  if (win.isVisible() && win.isFocused()) {
+    win.hide();
+  } else {
+    showMainWindow();
+  }
+}
+
+function getAutoLaunchEnabled(): boolean {
+  if (!app.isPackaged) return false;
+  try {
+    if (process.platform === "win32") {
+      const settings = app.getLoginItemSettings({
+        path: app.getPath("exe"),
+        args: ["--hidden"],
+      });
+      return Boolean(settings.openAtLogin);
+    }
+    return Boolean(app.getLoginItemSettings().openAtLogin);
+  } catch {
+    return false;
+  }
+}
+
+function setAutoLaunch(enabled: boolean): boolean {
+  if (!app.isPackaged) return false;
+  try {
+    if (process.platform === "win32") {
+      app.setLoginItemSettings({
+        openAtLogin: enabled,
+        path: app.getPath("exe"),
+        args: ["--hidden"],
+      });
+    } else if (process.platform === "darwin") {
+      app.setLoginItemSettings({
+        openAtLogin: enabled,
+      });
+    }
+    const actual = getAutoLaunchEnabled();
+    if (win && !win.isDestroyed()) {
+      win.webContents.send("app:auto-launch-changed", actual);
+    }
+    updateTrayMenu();
+    return actual;
+  } catch (err) {
+    console.warn("Failed to update auto-launch setting:", err);
+    return getAutoLaunchEnabled();
+  }
+}
+
+function ensureInitialAutoLaunch(): void {
+  if (!app.isPackaged) return;
+  const prefs = readAppPrefs();
+  if (!prefs.autoLaunchInitialized) {
+    setAutoLaunch(true);
+    writeAppPrefs({ ...prefs, autoLaunchInitialized: true });
+  }
+}
+
+function emitUpdateStatus(next: UpdateStatus): void {
+  currentUpdateStatus = next;
+  if (win && !win.isDestroyed()) {
+    win.webContents.send("update:status", next);
+  }
+  updateTrayMenu();
+}
+
+function hasNativeAutoUpdater(): boolean {
+  if (!app.isPackaged) return false;
+  const updateConfigPath = path.join(process.resourcesPath, "app-update.yml");
+  return fs.existsSync(updateConfigPath);
+}
+
+function isNewerVersion(remoteVersion: string, localVersion: string): boolean {
+  const clean = (v: string) =>
+    v
+      .replace(/^v/i, "")
+      .split("-")[0]
+      .split(".")
+      .map((n) => parseInt(n, 10) || 0);
+  const remote = clean(remoteVersion);
+  const local = clean(localVersion);
+  const len = Math.max(remote.length, local.length);
+  for (let i = 0; i < len; i++) {
+    const r = remote[i] ?? 0;
+    const l = local[i] ?? 0;
+    if (r > l) return true;
+    if (r < l) return false;
+  }
+  return false;
+}
+
+async function checkUpdatesViaGitHubApi(): Promise<void> {
+  emitUpdateStatus({ status: "checking" });
+  try {
+    const response = await fetch(GITHUB_RELEASES_API, {
+      headers: {
+        "User-Agent": "ClipDev-App",
+        Accept: "application/vnd.github+json",
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`GitHub API (${response.status})`);
+    }
+    const data = (await response.json()) as {
+      tag_name?: string;
+      html_url?: string;
+    };
+    const latestTag = (data.tag_name || "").replace(/^v/i, "");
+    const currentVersion = app.getVersion();
+    if (latestTag && isNewerVersion(latestTag, currentVersion)) {
+      emitUpdateStatus({
+        status: "manual-download",
+        version: latestTag,
+        downloadUrl: data.html_url || "https://github.com/NicoVillarroelM/clipDev/releases/latest",
+      });
+    } else {
+      emitUpdateStatus({ status: "not-available", currentVersion });
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Network error";
+    emitUpdateStatus({ status: "error", message });
+  }
+}
+
+async function checkForUpdates(silent = false): Promise<void> {
+  if (
+    currentUpdateStatus.status === "checking" ||
+    currentUpdateStatus.status === "downloading" ||
+    currentUpdateStatus.status === "downloaded"
+  ) {
+    return;
+  }
+
+  if (hasNativeAutoUpdater()) {
+    try {
+      emitUpdateStatus({ status: "checking" });
+      await autoUpdater.checkForUpdates();
+    } catch (err) {
+      if (silent) {
+        emitUpdateStatus({ status: "idle" });
+      } else {
+        const message = err instanceof Error ? err.message : "Update check failed";
+        emitUpdateStatus({ status: "error", message });
+      }
+    }
+  } else if (!silent) {
+    await checkUpdatesViaGitHubApi();
+  }
+}
+
+function restartAndInstall(): void {
+  isQuitting = true;
+  if (tray && !tray.isDestroyed()) {
+    tray.destroy();
+    tray = null;
+  }
+  autoUpdater.quitAndInstall(false, true);
+}
+
+function updateTrayMenu(): void {
+  if (!tray || tray.isDestroyed()) return;
+
+  const updateItem: Electron.MenuItemConstructorOptions =
+    currentUpdateStatus.status === "downloaded"
+      ? {
+          label: `Reiniciar y actualizar (v${currentUpdateStatus.version})`,
+          click: () => restartAndInstall(),
+        }
+      : currentUpdateStatus.status === "manual-download"
+        ? {
+            label: `Descargar nueva versión (v${currentUpdateStatus.version})`,
+            click: () => {
+              if (currentUpdateStatus.status === "manual-download") {
+                void shell.openExternal(currentUpdateStatus.downloadUrl);
+              }
+            },
+          }
+        : {
+            label:
+              currentUpdateStatus.status === "checking"
+                ? "Buscando actualizaciones..."
+                : currentUpdateStatus.status === "downloading"
+                  ? `Descargando actualización (${currentUpdateStatus.percent}%)`
+                  : "Buscar actualizaciones",
+            enabled:
+              currentUpdateStatus.status !== "checking" &&
+              currentUpdateStatus.status !== "downloading",
+            click: () => {
+              showMainWindow();
+              void checkForUpdates(false);
+            },
+          };
+
+  const menuTemplate: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: "Abrir ClipDev (Ctrl+Shift+V)",
+      click: () => showMainWindow(),
+    },
+    { type: "separator" },
+    {
+      label: "Iniciar con Windows",
+      type: "checkbox",
+      checked: getAutoLaunchEnabled(),
+      enabled: app.isPackaged,
+      click: (item) => {
+        setAutoLaunch(item.checked);
+      },
+    },
+    updateItem,
+    { type: "separator" },
+    {
+      label: "Salir de ClipDev",
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  ];
+
+  tray.setContextMenu(Menu.buildFromTemplate(menuTemplate));
+}
+
+function createTray(): void {
+  const iconPath = resolveIconPath();
+  if (!iconPath) return;
+
+  const icon = nativeImage.createFromPath(iconPath);
+  const trayIcon =
+    process.platform === "darwin" ? icon.resize({ width: 16, height: 16 }) : icon;
+
+  tray = new Tray(trayIcon);
+  tray.setToolTip(`ClipDev v${app.getVersion()}`);
+  tray.on("click", () => {
+    toggleMainWindow();
+  });
+  updateTrayMenu();
+}
+
+async function createWindow() {
+  const isMac = process.platform === "darwin";
+  const preloadPath = path.join(__dirname, "preload.cjs");
+  const iconPath = resolveIconPath();
 
   win = new BrowserWindow({
     width: 820,
@@ -56,7 +375,6 @@ async function createWindow() {
     },
   });
 
-  // Impedir popups o ventanas no autorizadas: abrir enlaces externos en el navegador del usuario de forma segura
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("https:") || url.startsWith("http:")) {
       void shell.openExternal(url);
@@ -64,7 +382,6 @@ async function createWindow() {
     return { action: "deny" };
   });
 
-  // Impedir navegación dentro de la app hacia URLs remotas
   win.webContents.on("will-navigate", (event, url) => {
     const currentUrl = win?.webContents.getURL();
     if (currentUrl && url !== currentUrl) {
@@ -83,8 +400,17 @@ async function createWindow() {
     console.error("Page failed to load:", code, desc, validatedURL);
   });
 
+  win.on("close", (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      win?.hide();
+    }
+  });
+
   win.once("ready-to-show", () => {
-    win?.show();
+    if (!isHiddenLaunch) {
+      win?.show();
+    }
     if (VITE_DEV_SERVER_URL) {
       win?.webContents.openDevTools({ mode: "detach" });
     }
@@ -249,69 +575,112 @@ async function startClipboardWatcher() {
   }, 750);
 }
 
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
+
+autoUpdater.on("checking-for-update", () => {
+  emitUpdateStatus({ status: "checking" });
+});
+
+autoUpdater.on("update-available", (info) => {
+  emitUpdateStatus({ status: "available", version: info.version });
+});
+
+autoUpdater.on("download-progress", (progress) => {
+  const version =
+    currentUpdateStatus.status === "available" || currentUpdateStatus.status === "downloading"
+      ? currentUpdateStatus.version
+      : undefined;
+  emitUpdateStatus({
+    status: "downloading",
+    version,
+    percent: Math.round(progress.percent),
+  });
+});
+
+autoUpdater.on("update-downloaded", (info) => {
+  emitUpdateStatus({ status: "downloaded", version: info.version });
+});
+
+autoUpdater.on("update-not-available", () => {
+  emitUpdateStatus({ status: "not-available", currentVersion: app.getVersion() });
+});
+
+autoUpdater.on("error", (err) => {
+  console.warn("Auto-updater error:", err);
+  emitUpdateStatus({
+    status: "error",
+    message: err?.message || "Update check failed",
+  });
+});
+
 async function initializeApp() {
   await app.whenReady();
 
-  // Denegar permisos innecesarios (cámara, micrófono, geolocalización)
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
     callback(false);
   });
 
+  ensureInitialAutoLaunch();
+  createTray();
   await createWindow();
   await startClipboardWatcher();
 
   if (app.isPackaged) {
     setTimeout(() => {
-      autoUpdater.checkForUpdatesAndNotify().catch((err) => {
-        console.warn("Auto-update check failed:", err);
-      });
+      void checkForUpdates(true);
     }, 4000);
+
+    updateInterval = setInterval(() => {
+      void checkForUpdates(true);
+    }, AUTO_UPDATE_INTERVAL_MS);
   }
 
-  // Atajo global para abrir/cerrar la ventana desde cualquier lugar
   globalShortcut.register("CommandOrControl+Shift+V", () => {
-    if (!win) return;
-    if (win.isVisible() && win.isFocused()) {
-      win.hide();
-    } else {
-      win.show();
-      win.focus();
-    }
+    toggleMainWindow();
   });
 
   app.on("activate", () => {
     if (win) {
-      win.show();
-      win.focus();
+      showMainWindow();
     } else if (BrowserWindow.getAllWindows().length === 0) {
       void createWindow();
     }
   });
 }
 
-void initializeApp().catch((err) => {
-  console.error("Failed to initialize app:", err);
-});
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
-const userDataPath = app.getPath("userData");
-let storageDb: ClipDevDatabase | null = null;
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    showMainWindow();
+  });
 
-function getDatabase(): ClipDevDatabase {
-  if (!storageDb) {
-    storageDb = new ClipDevDatabase(userDataPath);
-  }
-  return storageDb;
+  void initializeApp().catch((err) => {
+    console.error("Failed to initialize app:", err);
+  });
 }
+
+app.on("before-quit", () => {
+  isQuitting = true;
+});
 
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
   if (clipboardInterval) clearInterval(clipboardInterval);
+  if (updateInterval) clearInterval(updateInterval);
+  if (tray && !tray.isDestroyed()) {
+    tray.destroy();
+    tray = null;
+  }
   storageDb?.close();
   storageDb = null;
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
+  if (process.platform !== "darwin" && isQuitting) {
     app.quit();
   }
 });
@@ -382,17 +751,36 @@ ipcMain.on("window:set-background-material", (_event, material: "none" | "acryli
   }
 });
 
-autoUpdater.autoDownload = true;
-autoUpdater.autoInstallOnAppQuit = true;
+ipcMain.handle("app:get-version", () => app.getVersion());
 
-autoUpdater.on("update-downloaded", (info) => {
-  if (win && !win.isDestroyed()) {
-    win.webContents.send("update:downloaded", info.version);
-  }
+ipcMain.handle("app:get-auto-launch", () => ({
+  enabled: getAutoLaunchEnabled(),
+  supported: app.isPackaged && (process.platform === "win32" || process.platform === "darwin"),
+}));
+
+ipcMain.handle("app:set-auto-launch", (_event, enabled: boolean) => {
+  const actual = setAutoLaunch(Boolean(enabled));
+  return {
+    enabled: actual,
+    supported: app.isPackaged && (process.platform === "win32" || process.platform === "darwin"),
+  };
+});
+
+ipcMain.handle("update:get-status", () => currentUpdateStatus);
+
+ipcMain.handle("update:check", async () => {
+  await checkForUpdates(false);
+  return currentUpdateStatus;
 });
 
 ipcMain.on("app:restart-and-install", () => {
-  autoUpdater.quitAndInstall();
+  restartAndInstall();
+});
+
+ipcMain.on("app:open-external", (_event, url: string) => {
+  if (typeof url === "string" && (url.startsWith("https://") || url.startsWith("http://"))) {
+    void shell.openExternal(url);
+  }
 });
 
 ipcMain.handle("storage:load-disk", () => {
