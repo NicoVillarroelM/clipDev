@@ -1,11 +1,11 @@
-import { Minus, X, Clipboard, StickyNote } from "lucide-react";
+import { Minus, X, Clipboard, StickyNote, Download, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import { SettingsPopover } from "../settings/SettingsPopover";
+import { useAppSystem } from "../../hooks";
 import type { ActiveTab } from "../../types/clip";
 import type { ThemeId, ThemeMode, FontSize, AppFinish } from "../../types/theme";
 import { translations, type Language } from "../../locales/translations";
 import clipLogo from "../../assets/clipDev_logo.png";
-import { APP_VERSION } from "../../constants";
 
 interface TitleBarProps {
   activeTab: ActiveTab;
@@ -41,7 +41,20 @@ export const TitleBar = ({
   onToggleFinish,
 }: TitleBarProps) => {
   const t = translations[lang];
-  const isMac = window.electronAPI?.platform === "darwin" || (typeof navigator !== "undefined" && navigator.userAgent.includes("Mac"));
+  const isMac =
+    window.electronAPI?.platform === "darwin" ||
+    (typeof navigator !== "undefined" && navigator.userAgent.includes("Mac"));
+
+  const {
+    appVersion,
+    autoLaunch,
+    autoLaunchSupported,
+    updateStatus,
+    handleToggleAutoLaunch,
+    handleCheckForUpdates,
+    handleRestartAndInstall,
+    handleOpenExternal,
+  } = useAppSystem();
 
   const handleMinimize = () => {
     window.electronAPI?.minimizeWindow();
@@ -52,7 +65,11 @@ export const TitleBar = ({
   };
 
   return (
-    <header className={`titlebar-drag relative z-50 h-12 theme-bg-header border-b theme-border-app flex items-center justify-between select-none transition-colors duration-200 ${isMac ? "pl-20 pr-3" : "px-3"}`}>
+    <header
+      className={`titlebar-drag relative z-50 h-12 theme-bg-header border-b theme-border-app flex items-center justify-between select-none transition-colors duration-200 ${
+        isMac ? "pl-20 pr-3" : "px-3"
+      }`}
+    >
       <div className="flex items-center gap-3 sm:gap-4">
         <div className="flex items-center gap-2.5 group cursor-default">
           <div className="w-7 h-7 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
@@ -69,7 +86,7 @@ export const TitleBar = ({
               <span className="theme-accent-text font-black ml-0.5">Dev</span>
             </span>
             <span className="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded-full theme-accent-subtle theme-accent-text border theme-accent-border/40 tracking-wider">
-              v{APP_VERSION}
+              v{appVersion}
             </span>
           </div>
         </div>
@@ -78,7 +95,9 @@ export const TitleBar = ({
           <button
             onClick={() => onTabChange("clipboard")}
             className={`relative flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-colors z-10 ${
-              activeTab === "clipboard" ? "theme-text-app" : "theme-text-muted hover:theme-text-app"
+              activeTab === "clipboard"
+                ? "theme-text-app"
+                : "theme-text-muted hover:theme-text-app"
             }`}
           >
             {activeTab === "clipboard" && (
@@ -98,7 +117,9 @@ export const TitleBar = ({
           <button
             onClick={() => onTabChange("notes")}
             className={`relative flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-colors z-10 ${
-              activeTab === "notes" ? "theme-text-app" : "theme-text-muted hover:theme-text-app"
+              activeTab === "notes"
+                ? "theme-text-app"
+                : "theme-text-muted hover:theme-text-app"
             }`}
           >
             {activeTab === "notes" && (
@@ -118,6 +139,38 @@ export const TitleBar = ({
       </div>
 
       <div className="flex items-center gap-2">
+        {updateStatus.status === "downloaded" && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleRestartAndInstall}
+            className="titlebar-no-drag flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-400 text-[11px] font-semibold transition-colors shadow-sm"
+            title={`${t.controls.updateReady} (v${updateStatus.version})`}
+          >
+            <RefreshCw className="w-3 h-3" />
+            <span>
+              {t.controls.updateReadyShort} v{updateStatus.version}
+            </span>
+          </motion.button>
+        )}
+
+        {updateStatus.status === "manual-download" && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => handleOpenExternal(updateStatus.downloadUrl)}
+            className="titlebar-no-drag flex items-center gap-1.5 px-2.5 py-1 rounded-lg theme-accent-subtle theme-accent-text theme-accent-border border text-[11px] font-semibold transition-colors shadow-sm"
+            title={`${t.controls.updateAvailable} (v${updateStatus.version})`}
+          >
+            <Download className="w-3 h-3" />
+            <span>
+              {t.controls.downloadUpdate} v{updateStatus.version}
+            </span>
+          </motion.button>
+        )}
+
         <div className="hidden sm:flex items-center gap-1 text-[11px] theme-text-muted font-mono theme-bg-app px-2.5 py-1 rounded-md border theme-border-app">
           <span>{t.app.shortcutHint}</span>
         </div>
@@ -133,6 +186,14 @@ export const TitleBar = ({
           onSelectFontSize={onSelectFontSize}
           lang={lang}
           onSelectLang={onSelectLang}
+          appVersion={appVersion}
+          autoLaunch={autoLaunch}
+          autoLaunchSupported={autoLaunchSupported}
+          onToggleAutoLaunch={handleToggleAutoLaunch}
+          updateStatus={updateStatus}
+          onCheckForUpdates={handleCheckForUpdates}
+          onRestartAndInstall={handleRestartAndInstall}
+          onOpenExternal={handleOpenExternal}
         />
 
         {!isMac && (
